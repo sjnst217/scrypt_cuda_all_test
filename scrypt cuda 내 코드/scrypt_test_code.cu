@@ -966,5 +966,5 @@ void performance_test_scrypt_3(uint32_t blocksize, uint32_t threadsize)
 
 int main()
 {
-	performance_test_scrypt_1(512, 2);
+	performance_test_scrypt_3(256, 2);
 }
