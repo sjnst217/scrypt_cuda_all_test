@@ -654,7 +654,7 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	uint8_t* gpu_salt = NULL;										//gpu 내부에서의 salt
 	uint8_t* gpu_key = NULL;										//gpu 내부에서의 key
 	uint8_t* gpu_b = NULL;											//gpu 내부에서의 전체 block
-	uint64_t Blen = 128 * 16 * 8;									//block 길이 (128 * p * r)
+	uint64_t Blen = 128 * 2 * 8;									//block 길이 (128 * p * r)
 	uint64_t Vlen = 32 * 8 * (1024 + 2) * sizeof(uint32_t);			//내부에서 사용하는 Vector의 길이 (128 * r * N) 여기에서 32인 이유는 Vector를 연산할 때 uint8_t 였던 block을 uint32_t로 바꾸어서 연산하기 때문, (N + 2)를 해 준 이유는 X block 과 마지막 결과값(output) 의 크기를 할당하기 위해서 인듯?
 	uint64_t total = Blen + Vlen;									//내부에 할당할 전체 크기
 	float elapsed_time_ms = 0.0f;
@@ -680,7 +680,7 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	}
 
 	for (int i = 0; i < 1; i++) {
-		GPU_scrypt << <blocksize, threadsize >> > (gpu_b, gpu_pass, 8, gpu_salt, 4, 1024, 8, 16, gpu_key, 64);	// 순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
+		GPU_scrypt << <blocksize, threadsize >> > (gpu_b, gpu_pass, 8, gpu_salt, 4, 1024, 8, 2, gpu_key, 64);	// 순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
 		cudaMemcpy(cpu_key, gpu_key, 64 * blocksize * threadsize, cudaMemcpyDeviceToHost);						// 연산을 마친 gpu의 전체 key를 cpu로 복사
 	}
 
@@ -689,6 +689,7 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	cudaEventSynchronize(start);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsed_time_ms, start, stop);
+	printf("%4.2f\n", elapsed_time_ms);
 	printf("blocksize: %d, threadsize: %d, scrypt/s: %4.2f\n", blocksize, threadsize, blocksize * threadsize * (1000 / elapsed_time_ms));
 
 	cudaFree(gpu_pass);
@@ -699,37 +700,20 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 }
 
 int main() {
-	performance_test_scrypt(1, 16);
-	performance_test_scrypt(16, 1);
+	performance_test_scrypt(2, 16);
+	performance_test_scrypt(16, 2);
 
-	performance_test_scrypt(1, 32);
-	performance_test_scrypt(32, 1);
+	performance_test_scrypt(2, 32);
+	performance_test_scrypt(32, 2);
 
-	performance_test_scrypt(1, 64);
-	performance_test_scrypt(64, 1);
+	performance_test_scrypt(2, 64);
+	performance_test_scrypt(64, 2);
 
-	performance_test_scrypt(1, 128);
-	performance_test_scrypt(128, 1);
-
-	performance_test_scrypt(1, 256);
-	performance_test_scrypt(256, 1);
-
-
+	performance_test_scrypt(2, 128);
+	performance_test_scrypt(128, 2);
 
 	performance_test_scrypt(2, 256);
 	performance_test_scrypt(256, 2);
-
-	performance_test_scrypt(4, 256);
-	performance_test_scrypt(256, 4);
-
-	performance_test_scrypt(8, 256);
-	performance_test_scrypt(256, 8);
-
-	performance_test_scrypt(16, 256);
-	performance_test_scrypt(256, 16);
-
-	performance_test_scrypt(32, 256);
-	performance_test_scrypt(256, 32);
 
 
 

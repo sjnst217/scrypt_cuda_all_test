@@ -686,8 +686,8 @@ int EVP_PBE_scrypt(uint8_t* pass, size_t passlen, uint8_t* salt, size_t saltlen,
 	PBKDF2_HMAC_SHA256(pass, passlen, B, Blen, key, keylen, 1);
 	cycle1 = cpucycles();
 	result += cycle1 - cycle0;
-	printf("[CPU] Performance of Scrypt/sec = %llu\n", (result));
-	printf("[CPU] Performance of Scrypt/sec = %llu\n", (2400000000) / (result));
+
+	printf("[CPU] Performance of Scrypt/sec = %llu\n", (2500000000) / (result));	//사용 하고계신 CPU 성능에 맞게 앞의 숫자 바꿔서 측정하셔야 정확해용
 }
 
 int main()
@@ -696,15 +696,10 @@ int main()
 	uint8_t password[8] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
 	uint8_t salt[4] = { 0x4e, 0x61, 0x43, 0x6c };
 	uint32_t r = 8;
-	uint32_t p = 256;
+	uint32_t p = 2;															//p가 2일때, p가 4일때의 값
 	uint32_t N = 1024;
 	uint32_t dklen = 64;
 	EVP_PBE_scrypt(password, 8, salt, 4, N, r, p, (uint8_t*)dkout, dklen);
 
-	for (int i = 0; i < 16; i++) {
-		printf("%08X ", dkout[i]);
-		if ((i + 1) % 8 == 0)
-			printf("\n");
-	}
 	return 0;
 }
