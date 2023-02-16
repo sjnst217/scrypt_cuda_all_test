@@ -166,17 +166,13 @@ __host__ __device__ void _SHA256_process_coalesced(uint8_t* pt, uint64_t ptLen, 
     uint64_t us_pt_index = 0;           //총 몇 번의 sha256_core를 이용했는지 확인하기 위한 index
 
     uint64_t us_coalesced_index = 0;    //다음 pt의 시작 위치를 얻기 위한 index
-    uint64_t us_ptLen = 0;              //ptLen에서 몇 번의 sha256_core를 이용하면 다음 coalesced 정렬된 위치를 알기 위한 index
-
-    us_ptLen = ptLen / p;               //128 * r
-    us_ptLen /= GPU_SHA256_BLOCK;       // 2 * r
 
     while ((ptLen + info->lastLen) >= GPU_SHA256_BLOCK)
     {
         for (int i = info->lastLen; i < (GPU_SHA256_BLOCK - info->lastLen); i++)
         {
-            info->BUF[i] = pt[i * us_coalesced_index + pt_index];       // 0 ~ 63번째 처리
-            us_coalesced_index += num_of_scrypt * p;                    // 각 값에 알맞게 처리
+            info->BUF[i] = pt[num_of_scrypt * p * i + pt_index]; 
+            us_coalesced_index += num_of_scrypt * p;
         }
         _SHA256_core((uint32_t*)info->BUF, info->digest);               //BUF의 값의 sha256결과를 digest에 저장
         ptLen -= (GPU_SHA256_BLOCK - info->lastLen);                    //ptLen -= 64
@@ -185,20 +181,17 @@ __host__ __device__ void _SHA256_process_coalesced(uint8_t* pt, uint64_t ptLen, 
         pt_index += us_coalesced_index;                                 //pt_index += 64 * nos * p
         us_pt_index++;                                                  //us_pt_index++
 
-        if ((us_pt_index + 1) % us_ptLen == 0)                          //다음 열로 넘어가게 되면
+        if ((us_pt_index) % 16 == 0)                                    //다음 열로 넘어가게 되면
         {
-            pt_index = (us_pt_index + 1) / us_ptLen;                    //pt_index의 값을 열의 번호로 나타내줌
+            pt_index = (us_pt_index + 1) / 16;                          //pt_index의 값을 열의 번호로 나타내줌
         }
 
         us_coalesced_index = 0;
         info->lastLen = 0;
     }
     for (int i = 0; i < ptLen; i++)
-    {
-        info->BUF[i + info->lastLen] = pt[i + us_coalesced_index + pt_index];
-        us_coalesced_index += num_of_scrypt * p;
-    }
-    us_coalesced_index = 0;
+        info->BUF[i + info->lastLen] = pt[num_of_scrypt * p * i + pt_index];
+
     info->lastLen += ptLen;
 }
 
@@ -907,6 +900,8 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint8_t* pass, size_t passl
             salt + (saltlen * blockIdx.x), saltlen, B + blockIdx.x * p, Blen, 1, p, num_of_scrypt);
 
     scryptROMix(B + tid, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
+
+    __syncthreads();
  
     // 이후의 PBKDF2과정에서 scryptROMix 하나의 block에 대한 전체 값에 대해서 집어넣어주어야 하기 때문에 1번의 Thread가 1번의 PBKDF2과정을 하면 안됨
     if (us_tid == 0)
@@ -931,8 +926,8 @@ __global__ void GPU_scrypt_fifth_method(uint8_t* B, uint8_t* pass, size_t passle
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
 
-    PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * blockIdx.x), passlen, \
-        salt + (saltlen * blockIdx.x), saltlen, B + blockIdx.x * p, Blen, 1, p, num_of_scrypt);
+    PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * us_tid), passlen, \
+        salt + (saltlen * us_tid), saltlen, B + us_tid * p, Blen, 1, p, num_of_scrypt);
 
     for (int x = 0; x < p; x++)
         scryptROMix(B + ((p * p * bid + tid + p * x)), \
@@ -1033,14 +1028,14 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    for (int i = 0; i < 64 * blocksize; i++)
-    {
-        printf("%02X ", cpu_key[i]);
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-        if ((i + 1) % 64 == 0)
-            printf("\n");
-    }
+    //for (int i = 0; i < 64 * blocksize; i++)
+    //{
+    //    printf("%02X ", cpu_key[i]);
+    //    if ((i + 1) % 16 == 0)
+    //        printf("\n");
+    //    if ((i + 1) % 64 == 0)
+    //        printf("\n");
+    //}
 
     printf("first method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, (1000 / elapsed_time_ms) * blocksize);
 
@@ -1205,14 +1200,14 @@ void performance_test_scrypt_3(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
 
     printf("third method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -1356,14 +1351,14 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    for (int i = 0; i < 64 * num_of_scrypt; i++)
-    {
-        printf("%02X ", cpu_key[i]);
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-        if ((i + 1) % 64 == 0)
-            printf("\n");
-    }
+    //for (int i = 0; i < 64 * num_of_scrypt; i++)
+    //{
+    //    printf("%02X ", cpu_key[i]);
+    //    if ((i + 1) % 16 == 0)
+    //        printf("\n");
+    //    if ((i + 1) % 64 == 0)
+    //        printf("\n");
+    //}
 
     printf("fifth method's <<<%d, %d>>> scrypt per second is : %4.2f\n", num_of_scrypt / threadsize, threadsize, 1000 / elapsed_time_ms * num_of_scrypt);
 
@@ -1376,13 +1371,13 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_4(32, 2);
-    //performance_test_scrypt_1(64, 2);
-    //performance_test_scrypt_1(128, 2);
-    //performance_test_scrypt_1(256, 2);
-    //performance_test_scrypt_1(512, 2);
-    //performance_test_scrypt_1(1024, 2);
-    //performance_test_scrypt_1(2048, 2);
+    performance_test_scrypt_5(32, 2);
+    performance_test_scrypt_5(64, 2);
+    performance_test_scrypt_5(128, 2);
+    performance_test_scrypt_5(256, 2);
+    performance_test_scrypt_5(512, 2);
+    performance_test_scrypt_5(1024, 2);
+    performance_test_scrypt_5(2048, 2);
 
     //performance_test_scrypt_2(32, 4);
     //performance_test_scrypt_2(64, 4);
