@@ -1189,13 +1189,13 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_1(32, 4);
-    performance_test_scrypt_1(64, 4);
-    performance_test_scrypt_1(128, 4);
-    performance_test_scrypt_1(256, 4);
-    performance_test_scrypt_1(512, 4);
-    performance_test_scrypt_1(1024, 4);
-    performance_test_scrypt_1(2048, 4);
+    //performance_test_scrypt_1(32, 4);
+    //performance_test_scrypt_1(64, 4);
+    //performance_test_scrypt_1(128, 4);
+    //performance_test_scrypt_1(256, 4);
+    //performance_test_scrypt_1(512, 4);
+    //performance_test_scrypt_1(1024, 4);
+    //performance_test_scrypt_1(2048, 4);
 
     //performance_test_scrypt_2(32, 4);
     //performance_test_scrypt_2(64, 4);
@@ -1205,13 +1205,13 @@ int main()
     //performance_test_scrypt_2(1024, 4);
     //performance_test_scrypt_2(2048, 4);
 
-    //performance_test_scrypt_3(32, 4);
-    //performance_test_scrypt_3(64, 4);
-    //performance_test_scrypt_3(128, 4);
-    //performance_test_scrypt_3(256, 4);
-    //performance_test_scrypt_3(512, 4); 
-    //performance_test_scrypt_3(1024, 4);
-    //performance_test_scrypt_3(2048, 4);
+    performance_test_scrypt_3(32, 2);
+    performance_test_scrypt_3(64, 2);
+    performance_test_scrypt_3(128, 2);
+    performance_test_scrypt_3(256, 2);
+    performance_test_scrypt_3(512, 2); 
+    performance_test_scrypt_3(1024, 2);
+    performance_test_scrypt_3(2048, 2);
 
     //performance_test_scrypt_4(32, 4);
     //performance_test_scrypt_4(64, 4);

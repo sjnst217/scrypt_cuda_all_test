@@ -159,6 +159,49 @@ __host__ __device__ void _SHA256_process(uint8_t* pt, uint64_t ptLen, SHA256_INF
         info->BUF[i + info->lastLen] = pt[i + pt_index];
     info->lastLen += ptLen;
 }
+
+__host__ __device__ void _SHA256_process_coalesced(uint8_t* pt, uint64_t ptLen, SHA256_INFO* info, uint64_t p, uint64_t num_of_scrypt)
+{
+    uint64_t pt_index = 0;              //pt의 시작 위치를 찾는 index
+    uint64_t us_pt_index = 0;           //총 몇 번의 sha256_core를 이용했는지 확인하기 위한 index
+
+    uint64_t us_coalesced_index = 0;    //다음 pt의 시작 위치를 얻기 위한 index
+    uint64_t us_ptLen = 0;              //ptLen에서 몇 번의 sha256_core를 이용하면 다음 coalesced 정렬된 위치를 알기 위한 index
+
+    us_ptLen = ptLen / p;               //128 * r
+    us_ptLen /= GPU_SHA256_BLOCK;       // 2 * r
+
+    while ((ptLen + info->lastLen) >= GPU_SHA256_BLOCK)
+    {
+        for (int i = info->lastLen; i < (GPU_SHA256_BLOCK - info->lastLen); i++)
+        {
+            info->BUF[i] = pt[i * us_coalesced_index + pt_index];       // 0 ~ 63번째 처리
+            us_coalesced_index += num_of_scrypt * p;                    // 각 값에 알맞게 처리
+        }
+        _SHA256_core((uint32_t*)info->BUF, info->digest);               //BUF의 값의 sha256결과를 digest에 저장
+        ptLen -= (GPU_SHA256_BLOCK - info->lastLen);                    //ptLen -= 64
+        info->ptLen += (GPU_SHA256_BLOCK - info->lastLen);              //info->ptLen += 64
+
+        pt_index += us_coalesced_index;                                 //pt_index += 64 * nos * p
+        us_pt_index++;                                                  //us_pt_index++
+
+        if ((us_pt_index + 1) % us_ptLen == 0)                          //다음 열로 넘어가게 되면
+        {
+            pt_index = (us_pt_index + 1) / us_ptLen;                    //pt_index의 값을 열의 번호로 나타내줌
+        }
+
+        us_coalesced_index = 0;
+        info->lastLen = 0;
+    }
+    for (int i = 0; i < ptLen; i++)
+    {
+        info->BUF[i + info->lastLen] = pt[i + us_coalesced_index + pt_index];
+        us_coalesced_index += num_of_scrypt * p;
+    }
+    us_coalesced_index = 0;
+    info->lastLen += ptLen;
+}
+
 __host__ __device__ void _SHA256_final(SHA256_INFO* info, uint8_t* out)
 {
     uint64_t r = (info->lastLen) % GPU_SHA256_BLOCK;
@@ -403,6 +446,26 @@ __host__ __device__ void _PBKDF2_HMAC_SHA256_salt_compute(uint8_t* salt, uint64_
     _SHA256_process(temp, 4, &info);
     _SHA256_salt_compute_final(&info, out);
 }
+
+__host__ __device__ void _PBKDF2_HMAC_SHA256_salt_compute_coalesced(uint8_t* salt, uint64_t saLen, uint32_t integer, PBKDF2_HMAC_SHA256_INFO* INFO, uint32_t* out, uint64_t p, uint64_t num_of_scrypt)
+{
+    SHA256_INFO info;
+    uint8_t temp[4] = { (integer >> 24) & 0xff, (integer >> 16) & 0xff, (integer >> 8) & 0xff, (integer & 0xff) };
+    info.digest[0] = INFO->IPAD[0];
+    info.digest[1] = INFO->IPAD[1];
+    info.digest[2] = INFO->IPAD[2];
+    info.digest[3] = INFO->IPAD[3];
+    info.digest[4] = INFO->IPAD[4];
+    info.digest[5] = INFO->IPAD[5];
+    info.digest[6] = INFO->IPAD[6];
+    info.digest[7] = INFO->IPAD[7];
+    info.ptLen = 64;
+    info.lastLen = 0;
+    _SHA256_process_coalesced(salt, saLen, &info, p, num_of_scrypt);
+    _SHA256_process(temp, 4, &info);
+    _SHA256_salt_compute_final(&info, out);
+}
+
 __host__ __device__ void _PBKDF2_HMAC_SHA256_core(uint32_t* _prestate, uint32_t* digest, uint32_t* in)
 {
 
@@ -509,6 +572,7 @@ __host__ __device__ void _PBKDF2_HMAC_SHA256_core(uint32_t* _prestate, uint32_t*
     digest[6] = _prestate[6] + g;
     digest[7] = _prestate[7] + h;
 }
+//기존 PBKDF2
 __host__ __device__ void PBKDF2_HMAC_SHA256(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, uint8_t* dkout, size_t dkLen, size_t iter)
 {
     uint8_t buf[GPU_SHA256_BLOCK];
@@ -544,6 +608,7 @@ __host__ __device__ void PBKDF2_HMAC_SHA256(uint8_t* pt, size_t ptLen, uint8_t* 
         dkout += 32;
     }
 }
+//출력값이 coalesced 정렬 패턴에 맞게 되는 PBKDF2
 __host__ __device__ void PBKDF2_HMAC_SHA256_coalesced(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, uint8_t* dkout, size_t dkLen, size_t iter, uint64_t p, uint64_t num_of_scrypt)
 {
     uint8_t buf[GPU_SHA256_BLOCK];
@@ -589,6 +654,41 @@ __host__ __device__ void PBKDF2_HMAC_SHA256_coalesced(uint8_t* pt, size_t ptLen,
                 us_dkOUT += num_of_scrypt * p;
             }
         }
+    }
+}
+//입력값, 출력값 모두 coalesced memory access에 사용되도록 정렬한 PBKDF2
+__host__ __device__ void PBKDF2_HMAC_SHA256_coalesced2(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, uint8_t* dkout, size_t dkLen, size_t iter, uint64_t p, uint64_t num_of_scrypt)
+{
+    uint8_t buf[GPU_SHA256_BLOCK];
+    uint32_t _first[8];
+    uint32_t _second[8];
+    PBKDF2_HMAC_SHA256_INFO info;
+    uint32_t _TkLen = dkLen / GPU_SHA256_DIGEST;
+    if (dkLen % GPU_SHA256_DIGEST != 0) { _TkLen++; }
+
+    if (ptLen > GPU_SHA256_BLOCK)
+    {
+        _SHA256(pt, ptLen, buf);
+        _PBKDF2_HMAC_SHA256_precompute(buf, GPU_SHA256_DIGEST, &info);
+        info.ptLen = GPU_SHA256_DIGEST;
+    }
+    else
+    {
+        _PBKDF2_HMAC_SHA256_precompute(pt, ptLen, &info);
+        info.ptLen = ptLen;
+    }
+    for (uint32_t i = 0; i < _TkLen; i++)
+    {
+        _PBKDF2_HMAC_SHA256_salt_compute_coalesced(salt, saLen, i + 1, &info, _first, p, num_of_scrypt);
+        _PBKDF2_HMAC_SHA256_core(info.OPAD, _second, _first);
+        for (int z = 0; z < 8; z++)
+        {
+            dkout[4 * z + 0] = (_second[z] >> 24) & 0xff;
+            dkout[4 * z + 1] = (_second[z] >> 16) & 0xff;
+            dkout[4 * z + 2] = (_second[z] >> 8) & 0xff;
+            dkout[4 * z + 3] = (_second[z] >> 0) & 0xff;
+        }
+        dkout += 32;
     }
 }
 
@@ -719,7 +819,6 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint64_t p
     }
 }
 
-
 //CPU -> CPU
 __global__ void GPU_scrypt_first_method(uint8_t* B, uint64_t N, uint64_t r, uint64_t p)
 {
@@ -804,19 +903,15 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint8_t* pass, size_t passl
     V = (uint32_t*)(B + All_Blen);
 
     if (us_tid == 0)
-        PBKDF2_HMAC_SHA256(pass + (passlen * blockIdx.x), passlen, salt + (saltlen * blockIdx.x), saltlen, B + (blockIdx.x * Blen), Blen, 1);
+        PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * blockIdx.x), passlen, \
+            salt + (saltlen * blockIdx.x), saltlen, B + blockIdx.x * p, Blen, 1, p, num_of_scrypt);
 
-    __syncthreads();
-
-    scryptROMix(B + tid * 128 * r, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
-
-    __syncthreads();
-
+    scryptROMix(B + tid, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
+ 
     // 이후의 PBKDF2과정에서 scryptROMix 하나의 block에 대한 전체 값에 대해서 집어넣어주어야 하기 때문에 1번의 Thread가 1번의 PBKDF2과정을 하면 안됨
     if (us_tid == 0)
-    {
-        PBKDF2_HMAC_SHA256(pass + (passlen * blockIdx.x), passlen, B + blockIdx.x * Blen, Blen, key + (keylen * blockIdx.x), keylen, 1);
-    }
+        PBKDF2_HMAC_SHA256_coalesced2(pass + (passlen * blockIdx.x), passlen, \
+            B + blockIdx.x * p, Blen, key + (keylen * blockIdx.x), keylen, 1, p, num_of_scrypt);
 }
 
 //GPU -> GPU (PBKDF2) -> blocksize: p, threadsize: scrypt
@@ -836,17 +931,15 @@ __global__ void GPU_scrypt_fifth_method(uint8_t* B, uint8_t* pass, size_t passle
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
 
-    PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * us_tid), passlen, \
-        salt + (saltlen * us_tid), saltlen, B + us_tid * p, Blen, 1, p, num_of_scrypt);
+    PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * blockIdx.x), passlen, \
+        salt + (saltlen * blockIdx.x), saltlen, B + blockIdx.x * p, Blen, 1, p, num_of_scrypt);
 
     for (int x = 0; x < p; x++)
         scryptROMix(B + ((p * p * bid + tid + p * x)), \
             r, N, p, num_of_scrypt, X, T, V + (N * r * 32 * (p * p * bid + tid + p * x)));
 
-
-
-    PBKDF2_HMAC_SHA256_coalesced(pass + (passlen * us_tid), passlen, \
-        B + us_tid * Blen, Blen, key + us_tid, keylen, 1, p, num_of_scrypt);
+    PBKDF2_HMAC_SHA256_coalesced2(pass + (passlen * us_tid), passlen, \
+        B + us_tid * p, Blen, key + (keylen * us_tid), keylen, 1, p, num_of_scrypt);
 }
 
 // 아래의 코드는 여러개의 scrypt에서 p의 값이 1이상일 때 p에 대한 병렬 구현을 하기 위한 코드이다.
@@ -919,9 +1012,9 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaMemcpy(us_cpu_block, gpu_b, Blen * blocksize, cudaMemcpyDeviceToHost);
 
     int k = 0;
-    for (int i = 0; i < blocksize * threadsize; i++)
+    for (int i = 0; i < blocksize * threadsize; i++)        // num_of_scrypt * p
     {
-        for (int j = 0; j < 128 * 8; j++)
+        for (int j = 0; j < 128 * 8; j++)                   // 128 * r
         {
             cpu_block[k++] = us_cpu_block[blocksize * threadsize * j + i];
         }
@@ -1112,14 +1205,14 @@ void performance_test_scrypt_3(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    for (int i = 0; i < 64 * blocksize; i++)
-    {
-        printf("%02X ", cpu_key[i]);
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-        if ((i + 1) % 64 == 0)
-            printf("\n");
-    }
+    //for (int i = 0; i < 64 * blocksize; i++)
+    //{
+    //    printf("%02X ", cpu_key[i]);
+    //    if ((i + 1) % 16 == 0)
+    //        printf("\n");
+    //    if ((i + 1) % 64 == 0)
+    //        printf("\n");
+    //}
 
     printf("third method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -1186,16 +1279,14 @@ void performance_test_scrypt_4(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-
-
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //   printf("%02X ", cpu_key[i]);
-    //   if ((i + 1) % 16 == 0)
-    //      printf("\n");
-    //   if ((i + 1) % 64 == 0)
-    //      printf("\n");
-    //}
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+       printf("%02X ", cpu_key[i]);
+       if ((i + 1) % 16 == 0)
+          printf("\n");
+       if ((i + 1) % 64 == 0)
+          printf("\n");
+    }
 
     printf("fourth method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -1213,9 +1304,10 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 {
     cudaError_t err;
     cudaEvent_t start, stop;
-    uint8_t password[8] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
+    uint8_t password[GPU_PASSWORD_LEN] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
     uint8_t salt[4] = { 0x4e, 0x61, 0x43, 0x6c };
     uint8_t* cpu_key = (uint8_t*)malloc(64 * num_of_scrypt);
+
     if (cpu_key == NULL)
     {
         return;
@@ -1230,7 +1322,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
     uint64_t total = Blen + Vlen;
     float elapsed_time_ms = 0.0f;
 
-    cudaMalloc((void**)&gpu_pass, 8 * num_of_scrypt);
+    cudaMalloc((void**)&gpu_pass, GPU_PASSWORD_LEN * num_of_scrypt);
     cudaMalloc((void**)&gpu_salt, 4 * num_of_scrypt);
     cudaMalloc((void**)&gpu_key, 64 * num_of_scrypt);
 
@@ -1246,13 +1338,14 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
     for (int i = 0; i < num_of_scrypt; i++)
     {
-        cudaMemcpy(gpu_pass + (8 * i), password, 8, cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_pass + (GPU_PASSWORD_LEN * i), password, 8, cudaMemcpyHostToDevice);
         cudaMemcpy(gpu_salt + (4 * i), salt, 4, cudaMemcpyHostToDevice);
+
         password[7] = (i + 1) & 0xff;                                               //한 번 반복 때마다 password를 변환시켜주기 위함 -> 변환하고자 하는 코드에서는 안해줘도 됨
         salt[3] = (i + 2) & 0xff;
     }
 
-    GPU_scrypt_fifth_method << < num_of_scrypt / threadsize, threadsize >> > (gpu_b, gpu_pass, 8, gpu_salt, 4, 1024, 8, threadsize, gpu_key, 64);
+    GPU_scrypt_fifth_method << < num_of_scrypt / threadsize, threadsize >> > (gpu_b, gpu_pass, GPU_PASSWORD_LEN, gpu_salt, 4, 1024, 8, threadsize, gpu_key, 64);
 
     cudaMemcpy(cpu_key, gpu_key, 64 * num_of_scrypt, cudaMemcpyDeviceToHost);
 
@@ -1283,7 +1376,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_3(64, 4);
+    performance_test_scrypt_4(32, 2);
     //performance_test_scrypt_1(64, 2);
     //performance_test_scrypt_1(128, 2);
     //performance_test_scrypt_1(256, 2);
@@ -1299,13 +1392,13 @@ int main()
     //performance_test_scrypt_2(1024, 4);
     //performance_test_scrypt_2(2048, 4);
 
-    //performance_test_scrypt_3(32, 4);
-    //performance_test_scrypt_3(64, 4);
-    //performance_test_scrypt_3(128, 4);
-    //performance_test_scrypt_3(256, 4);
-    //performance_test_scrypt_3(512, 4); 
-    //performance_test_scrypt_3(1024, 4);
-    //performance_test_scrypt_3(2048, 4);
+    //performance_test_scrypt_3(32, 2);
+    //performance_test_scrypt_3(64, 2);
+    //performance_test_scrypt_3(128, 2);
+    //performance_test_scrypt_3(256, 2);
+    //performance_test_scrypt_3(512, 2); 
+    //performance_test_scrypt_3(1024, 2);
+    //performance_test_scrypt_3(2048, 2);
 
     //performance_test_scrypt_4(32, 4);
     //performance_test_scrypt_4(64, 4);
@@ -1323,7 +1416,4 @@ int main()
     //performance_test_scrypt_5(1024, 4);
     //performance_test_scrypt_5(2048, 4);
 
-    //performance_test_scrypt_1(32, 2);
-
-    // 측정 한번 하시고 여기에서 thread의 숫자만 4로 바꿔서 그렇게 각 방법당 2번씩만 재주시면 감사하겠습니당
 }
