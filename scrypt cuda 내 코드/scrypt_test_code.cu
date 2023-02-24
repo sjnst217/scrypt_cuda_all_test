@@ -608,8 +608,7 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint32_t* 
     unsigned char* pB;
     uint32_t* pV;
     uint64_t i, k;
-    uint64_t cycle0 = 0;
-    uint64_t cycle1 = 0;
+
     /* Convert from little endian input */
     for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++)
     {
@@ -857,14 +856,14 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
 
     printf("first method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, (1000 / elapsed_time_ms) * blocksize);
 
@@ -889,7 +888,7 @@ void performance_test_scrypt_2(uint32_t blocksize, uint32_t threadsize)
     uint8_t* gpu_pass = NULL;
     uint8_t* gpu_key = NULL;
     uint8_t* gpu_b = NULL;
-    uint64_t Blen = 128 * threadsize * 8;                                                //128 * p * r
+    uint64_t Blen = 128 * threadsize * 8;                                                 //128 * p * r
     uint64_t Vlen = 32 * 8 * 1024 * sizeof(uint32_t) * threadsize;                        //내부에서 사용하는 Vector의 길이로 현재의 코드에서는 각 p마다 서로 다른 Vector의 메모리를 사용해야하기 때문에 blocksize * threadsize 를 해주어야 한다.
     uint64_t total = Blen + Vlen;
     float elapsed_time_ms = 0.0f;
@@ -1189,7 +1188,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    //performance_test_scrypt_1(32, 4);
+    performance_test_scrypt_1(32, 2);
     //performance_test_scrypt_1(64, 4);
     //performance_test_scrypt_1(128, 4);
     //performance_test_scrypt_1(256, 4);
@@ -1205,13 +1204,13 @@ int main()
     //performance_test_scrypt_2(1024, 4);
     //performance_test_scrypt_2(2048, 4);
 
-    performance_test_scrypt_3(32, 2);
-    performance_test_scrypt_3(64, 2);
-    performance_test_scrypt_3(128, 2);
-    performance_test_scrypt_3(256, 2);
-    performance_test_scrypt_3(512, 2); 
-    performance_test_scrypt_3(1024, 2);
-    performance_test_scrypt_3(2048, 2);
+    //performance_test_scrypt_3(32, 2);
+    //performance_test_scrypt_3(64, 2);
+    //performance_test_scrypt_3(128, 2);
+    //performance_test_scrypt_3(256, 2);
+    //performance_test_scrypt_3(512, 2); 
+    //performance_test_scrypt_3(1024, 2);
+    //performance_test_scrypt_3(2048, 2);
 
     //performance_test_scrypt_4(32, 4);
     //performance_test_scrypt_4(64, 4);
