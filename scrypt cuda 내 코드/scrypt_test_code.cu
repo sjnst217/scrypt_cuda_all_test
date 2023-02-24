@@ -1168,14 +1168,17 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * num_of_scrypt; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+//#define PRINT   1
+#ifdef PRINT
+    for (int i = 0; i < 64 * num_of_scrypt; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("fifth method's <<<%d, %d>>> scrypt per second is : %4.2f\n", num_of_scrypt / threadsize, threadsize, 1000 / elapsed_time_ms * num_of_scrypt);
 
@@ -1188,7 +1191,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_1(32, 2);
+    performance_test_scrypt_5(2048, 4);
     //performance_test_scrypt_1(64, 4);
     //performance_test_scrypt_1(128, 4);
     //performance_test_scrypt_1(256, 4);
