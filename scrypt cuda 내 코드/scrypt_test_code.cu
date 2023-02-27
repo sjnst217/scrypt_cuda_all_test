@@ -856,14 +856,14 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    for (int i = 0; i < 64 * blocksize; i++)
-    {
-        printf("%02X ", cpu_key[i]);
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-        if ((i + 1) % 64 == 0)
-            printf("\n");
-    }
+    //for (int i = 0; i < 64 * blocksize; i++)
+    //{
+    //    printf("%02X ", cpu_key[i]);
+    //    if ((i + 1) % 16 == 0)
+    //        printf("\n");
+    //    if ((i + 1) % 64 == 0)
+    //        printf("\n");
+    //}
 
     printf("first method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, (1000 / elapsed_time_ms) * blocksize);
 
@@ -1191,13 +1191,13 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_5(2048, 4);
-    //performance_test_scrypt_1(64, 4);
-    //performance_test_scrypt_1(128, 4);
-    //performance_test_scrypt_1(256, 4);
-    //performance_test_scrypt_1(512, 4);
-    //performance_test_scrypt_1(1024, 4);
-    //performance_test_scrypt_1(2048, 4);
+    performance_test_scrypt_1(32, 2);
+    performance_test_scrypt_1(64, 2);
+    performance_test_scrypt_1(128, 2);
+    performance_test_scrypt_1(256, 2);
+    performance_test_scrypt_1(512, 2);
+    performance_test_scrypt_1(1024, 2);
+    performance_test_scrypt_1(2048, 2);
 
     //performance_test_scrypt_2(32, 4);
     //performance_test_scrypt_2(64, 4);
@@ -1223,13 +1223,13 @@ int main()
     //performance_test_scrypt_4(1024, 4);
     //performance_test_scrypt_4(2048, 4);
 
-    //performance_test_scrypt_5(32, 4);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
-    //performance_test_scrypt_5(64, 4);  
-    //performance_test_scrypt_5(128, 4);
-    //performance_test_scrypt_5(256, 4);
-    //performance_test_scrypt_5(512, 4);
-    //performance_test_scrypt_5(1024, 4);
-    //performance_test_scrypt_5(2048, 4);
+    //performance_test_scrypt_5(32, 2);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
+    //performance_test_scrypt_5(64, 2);  
+    //performance_test_scrypt_5(128, 2);
+    //performance_test_scrypt_5(256, 2);
+    //performance_test_scrypt_5(512, 2);
+    //performance_test_scrypt_5(1024, 2);
+    //performance_test_scrypt_5(2048, 2);
 
     //performance_test_scrypt_1(32, 2);
 

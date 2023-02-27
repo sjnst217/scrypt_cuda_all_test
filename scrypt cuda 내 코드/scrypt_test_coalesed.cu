@@ -945,8 +945,9 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint8_t* pass, size_t passl
     All_Blen = 128 * r * p * gridDim.x;      //전체 블록의 길이
     Blen = 128 * r * p;                     //1개의 블록의 길이
 
-    uint32_t X[32 * 8];                     // 여기에서 8은 r임
-    uint32_t T[32 * 8];
+    __shared__ uint32_t X[32 * 8 * 4]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * 4];
+
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
 
@@ -955,8 +956,6 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint8_t* pass, size_t passl
             salt + (saltlen * blockIdx.x), saltlen, B + blockIdx.x * p, Blen, 1, p, num_of_scrypt);
 
     scryptROMix(B + tid, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
-
-    __syncthreads();
  
     // 이후의 PBKDF2과정에서 scryptROMix 하나의 block에 대한 전체 값에 대해서 집어넣어주어야 하기 때문에 1번의 Thread가 1번의 PBKDF2과정을 하면 안됨
     if (us_tid == 0)
@@ -1085,14 +1084,14 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    for (int i = 0; i < 64 * blocksize; i++)
-    {
-        printf("%02X ", cpu_key[i]);
-        if ((i + 1) % 16 == 0)
-            printf("\n");
-        if ((i + 1) % 64 == 0)
-            printf("\n");
-    }
+    //for (int i = 0; i < 64 * blocksize; i++)
+    //{
+    //    printf("%02X ", cpu_key[i]);
+    //    if ((i + 1) % 16 == 0)
+    //        printf("\n");
+    //    if ((i + 1) % 64 == 0)
+    //        printf("\n");
+    //}
 
     printf("first method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, (1000 / elapsed_time_ms) * blocksize);
 
@@ -1373,14 +1372,14 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
     uint32_t* gpu_V = NULL;
     uint64_t Blen = 128 * threadsize * 8;                                       //128 * p * r
     uint64_t Vlen = 32 * 8 * 1024 * sizeof(uint32_t) * threadsize;              //내부에서 사용하는 Vector의 길이로 현재의 코드에서는 각 p마다 서로 다른 Vector의 메모리를 사용해야하기 때문에 blocksize * threadsize 를 해주어야 한다.
-    uint64_t total = Blen + Vlen;
+
     float elapsed_time_ms = 0.0f;
 
     cudaMalloc((void**)&gpu_pass, GPU_PASSWORD_LEN * num_of_scrypt);
     cudaMalloc((void**)&gpu_salt, 4 * num_of_scrypt);
     cudaMalloc((void**)&gpu_key, 64 * num_of_scrypt);
 
-    err = cudaMalloc((void**)&gpu_b, total * num_of_scrypt);
+    err = cudaMalloc((void**)&gpu_b, Blen * num_of_scrypt);
     if (err != cudaSuccess)
     {
         printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
@@ -1433,13 +1432,13 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-    performance_test_scrypt_5(1024, 4);
-    //performance_test_scrypt_1(64, 2);
-    //performance_test_scrypt_1(128, 2);
-    //performance_test_scrypt_1(256, 2);
-    //performance_test_scrypt_1(512, 2);
-    //performance_test_scrypt_1(1024, 2);
-    //performance_test_scrypt_1(2048, 2);
+    //performance_test_scrypt_1(32, 4);
+    //performance_test_scrypt_1(64, 4);
+    //performance_test_scrypt_1(128, 4);
+    //performance_test_scrypt_1(256, 4);
+    //performance_test_scrypt_1(512, 4);
+    //performance_test_scrypt_1(1024, 4);
+    //performance_test_scrypt_1(2048, 4);
 
     //performance_test_scrypt_2(32, 4);
     //performance_test_scrypt_2(64, 4);
@@ -1465,12 +1464,12 @@ int main()
     //performance_test_scrypt_4(1024, 4);
     //performance_test_scrypt_4(2048, 4);
 
-    //performance_test_scrypt_5(32, 4);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
-    //performance_test_scrypt_5(64, 4);  
-    //performance_test_scrypt_5(128, 4);
-    //performance_test_scrypt_5(256, 4);
-    //performance_test_scrypt_5(512, 4);
-    //performance_test_scrypt_5(1024, 4);
-    //performance_test_scrypt_5(2048, 4);
+    performance_test_scrypt_5(32, 4);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
+    performance_test_scrypt_5(64, 4);  
+    performance_test_scrypt_5(128, 4);
+    performance_test_scrypt_5(256, 4);
+    performance_test_scrypt_5(512, 4);
+    performance_test_scrypt_5(1024, 4);
+    performance_test_scrypt_5(2048, 4);
 
 }
