@@ -11,7 +11,10 @@
 #define GPU_rotr32(x, n)		(((x) >> (n)) | ((x) << (32 - (n))))
 #define GPU_ENDIAN_CHANGE32(X)		((GPU_rotl32((X),  8) & 0x00ff00ff) | (GPU_rotl32((X), 24) & 0xff00ff00))
 
+#define USE_P					2
+
 #define GPU_PASSWORD_LEN		8
+#define GPU_SALT_LEN			4
 #define GPU_SHA256_DIGEST		32
 #define GPU_SHA256_BLOCK		64
 #define GPU_add3(a, b, c)		(a + b + c)
