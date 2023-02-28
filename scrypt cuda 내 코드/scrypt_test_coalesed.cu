@@ -2056,14 +2056,16 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+#if PRINT == 1
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("first method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, (1000 / elapsed_time_ms) * blocksize);
 
@@ -2635,14 +2637,16 @@ void performance_test_scrypt_2(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+#if PRINT == 1
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("second method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -2957,14 +2961,16 @@ void performance_test_scrypt_3(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+#if PRINT == 1
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("third method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -3016,14 +3022,16 @@ void performance_test_scrypt_4(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * blocksize; i++)
-    //{
-    //   printf("%02X ", cpu_key[i]);
-    //   if ((i + 1) % 16 == 0)
-    //      printf("\n");
-    //   if ((i + 1) % 64 == 0)
-    //      printf("\n");
-    //}
+#if PRINT == 1
+    for (int i = 0; i < 64 * blocksize; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("fourth method's <<<%d, %d>>> scrypt per second is : %4.2f\n", blocksize, threadsize, 1000 / elapsed_time_ms * blocksize);
 
@@ -3079,14 +3087,16 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-    //for (int i = 0; i < 64 * num_of_scrypt; i++)
-    //{
-    //    printf("%02X ", cpu_key[i]);
-    //    if ((i + 1) % 16 == 0)
-    //        printf("\n");
-    //    if ((i + 1) % 64 == 0)
-    //        printf("\n");
-    //}
+#if PRINT == 1
+    for (int i = 0; i < 64 * num_of_scrypt; i++)
+    {
+        printf("%02X ", cpu_key[i]);
+        if ((i + 1) % 16 == 0)
+            printf("\n");
+        if ((i + 1) % 64 == 0)
+            printf("\n");
+    }
+#endif
 
     printf("fifth method's <<<%d, %d>>> scrypt per second is : %4.2f\n", num_of_scrypt / threadsize, threadsize, 1000 / elapsed_time_ms * num_of_scrypt);
 
@@ -3098,9 +3108,9 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-#define PRINT   1
+#define TEST_SCRYPT_NUM   1
 
-#if PRINT == 1
+#if TEST_SCRYPT_NUM == 1
     performance_test_scrypt_1(32, USE_P);
     performance_test_scrypt_1(64, USE_P);
     performance_test_scrypt_1(128, USE_P);
@@ -3108,7 +3118,7 @@ int main()
     performance_test_scrypt_1(512, USE_P);
     performance_test_scrypt_1(1024, USE_P);
     performance_test_scrypt_1(2048, USE_P);
-#elif PRINT == 2
+#elif TEST_SCRYPT_NUM == 2
     performance_test_scrypt_2(32, USE_P);
     performance_test_scrypt_2(64, USE_P);
     performance_test_scrypt_2(128, USE_P);
@@ -3116,7 +3126,7 @@ int main()
     performance_test_scrypt_2(512, USE_P);
     performance_test_scrypt_2(1024, USE_P);
     performance_test_scrypt_2(2048, USE_P);
-#elif PRINT == 3
+#elif TEST_SCRYPT_NUM == 3
     performance_test_scrypt_3(32, USE_P);
     performance_test_scrypt_3(64, USE_P);
     performance_test_scrypt_3(128, USE_P);
@@ -3124,7 +3134,7 @@ int main()
     performance_test_scrypt_3(512, USE_P);
     performance_test_scrypt_3(1024, USE_P);
     performance_test_scrypt_3(2048, USE_P);
-#elif PRINT == 4
+#elif TEST_SCRYPT_NUM == 4
     performance_test_scrypt_4(32, USE_P);
     performance_test_scrypt_4(64, USE_P);
     performance_test_scrypt_4(128, USE_P);
@@ -3132,7 +3142,7 @@ int main()
     performance_test_scrypt_4(512, USE_P);
     performance_test_scrypt_4(1024, USE_P);
     performance_test_scrypt_4(2048, USE_P);
-#elif PRINT == 5
+#elif TEST_SCRYPT_NUM == 5
     performance_test_scrypt_5(32, USE_P);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
     performance_test_scrypt_5(64, USE_P);
     performance_test_scrypt_5(128, USE_P);
