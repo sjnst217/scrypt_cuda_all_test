@@ -1269,7 +1269,6 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint64_t p
     uint64_t Blen = 32 * r;
     uint64_t tid = threadIdx.x;
 
-
     /* Convert from little endian input */
     for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++)
     {
@@ -3150,5 +3149,7 @@ int main()
     performance_test_scrypt_5(512, USE_P);
     performance_test_scrypt_5(1024, USE_P);
     performance_test_scrypt_5(2048, USE_P);
-#endif  
+#endif
+
+    return 0;
 }
