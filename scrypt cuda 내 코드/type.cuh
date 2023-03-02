@@ -1,13 +1,17 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
 
 /*	코드 사용 방법
+* 
 *	main함수의 TEST_SCRYPT_NUM의 숫자를 바꿔가면서 각 방법에 대한 실행을 조작
+* 
 *	아래의 USE_P를 이용해서 각 scrypt의 p의 값을 설정
+* 
 *	아래의 PRINT를 이용해서 각 결과값을 보여줄지 결정 -> (0은 NOT print, 1은 print)
 *	
 */

@@ -1458,7 +1458,7 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint64_t N, uint64_t r, uin
 }
 
 //GPU -> GPU (PBKDF2) -> blocksize: p, threadsize: scrypt
-__global__ void GPU_scrypt_fifth_method(uint8_t* B, uint32_t* V, uint64_t N, uint64_t r, uint64_t p, uint8_t* key, size_t keylen)
+__global__ void GPU_scrypt_fifth_method(uint8_t* B, uint64_t N, uint64_t r, uint64_t p, uint8_t* key, size_t keylen)
 {
     uint64_t Blen, All_Blen;
     uint64_t us_tid = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1471,6 +1471,9 @@ __global__ void GPU_scrypt_fifth_method(uint8_t* B, uint32_t* V, uint64_t N, uin
 
     __shared__ uint32_t X[32 * 8 * USE_P * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
     __shared__ uint32_t T[32 * 8 * USE_P * USE_P]; // 32 * r * p * sPt (scryptROMix Per thread = p)
+
+    uint32_t* V = NULL;
+    V = (uint32_t*)(B + All_Blen);
 
     PBKDF2_HMAC_SHA256_coalesced(password + (GPU_PASSWORD_LEN * us_tid), GPU_PASSWORD_LEN, \
         salt + (GPU_SALT_LEN * us_tid), GPU_SALT_LEN, B + us_tid * p, Blen, 1, p, num_of_scrypt);
@@ -2623,7 +2626,7 @@ void performance_test_scrypt_2(uint32_t blocksize, uint32_t threadsize)
         PBKDF2_HMAC_SHA256_coalesced(host_password + GPU_PASSWORD_LEN * i, GPU_PASSWORD_LEN, host_salt + GPU_SALT_LEN * i, GPU_SALT_LEN, cpu_block + i * threadsize, Blen, 1, threadsize, blocksize);
     }
 
-    cudaMemcpy(gpu_b, cpu_block, Blen * blocksize, cudaMemcpyHostToDevice);                                                            //gpu_b에 cpu_block 즉 PBKDF2의 결과값을 복사해줌 (blocksize만큼의 scrypt알고리즘을 사용해야 하기 때문에 이렇게 해야함)
+    cudaMemcpy(gpu_b, cpu_block, Blen * blocksize, cudaMemcpyHostToDevice);
 
     GPU_scrypt_second_method << <blocksize, threadsize >> > (gpu_b, 1024, 8, threadsize, gpu_key, 64);
 
@@ -3055,27 +3058,24 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
     uint8_t* gpu_key = NULL;
     uint8_t* gpu_b = NULL;
-    uint32_t* gpu_V = NULL;
     uint64_t Blen = 128 * threadsize * 8;                                       //128 * p * r
     uint64_t Vlen = 32 * 8 * 1024 * sizeof(uint32_t) * threadsize;              //내부에서 사용하는 Vector의 길이로 현재의 코드에서는 각 p마다 서로 다른 Vector의 메모리를 사용해야하기 때문에 blocksize * threadsize 를 해주어야 한다.
+    uint64_t total = Blen + Vlen;
 
     float elapsed_time_ms = 0.0f;
 
     cudaMalloc((void**)&gpu_key, 64 * num_of_scrypt);
 
-    err = cudaMalloc((void**)&gpu_b, Blen * num_of_scrypt);
+    err = cudaMalloc((void**)&gpu_b, total * num_of_scrypt);
     if (err != cudaSuccess)
     {
         printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
     }
-
-    cudaMalloc((void**)&gpu_V, Vlen * num_of_scrypt);
-
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
 
-    GPU_scrypt_fifth_method << < num_of_scrypt / threadsize, threadsize >> > (gpu_b, gpu_V, 1024, 8, threadsize, gpu_key, 64);
+    GPU_scrypt_fifth_method << < num_of_scrypt / threadsize, threadsize >> > (gpu_b, 1024, 8, threadsize, gpu_key, 64);
 
     cudaMemcpy(cpu_key, gpu_key, 64 * num_of_scrypt, cudaMemcpyDeviceToHost);
 
@@ -3101,13 +3101,12 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
     cudaFree(gpu_b);
     cudaFree(gpu_key);
-    cudaFree(gpu_V);
     free(cpu_key);
 }
 
 int main()
 {
-#define TEST_SCRYPT_NUM   1
+#define TEST_SCRYPT_NUM   5
 
 #if TEST_SCRYPT_NUM == 1
     performance_test_scrypt_1(32, USE_P);
