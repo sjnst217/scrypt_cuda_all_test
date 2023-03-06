@@ -22,7 +22,7 @@
 #define GPU_rotr32(x, n)		(((x) >> (n)) | ((x) << (32 - (n))))
 #define GPU_ENDIAN_CHANGE32(X)		((GPU_rotl32((X),  8) & 0x00ff00ff) | (GPU_rotl32((X), 24) & 0xff00ff00))
 
-#define USE_P					4
+#define USE_P					2
 
 #define PRINT					0
 

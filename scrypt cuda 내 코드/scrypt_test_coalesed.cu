@@ -2616,7 +2616,7 @@ void performance_test_scrypt_2(uint32_t blocksize, uint32_t threadsize)
     {
         printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
     }
-
+    
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
@@ -3106,7 +3106,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-#define TEST_SCRYPT_NUM   5
+#define TEST_SCRYPT_NUM   2
 
 #if TEST_SCRYPT_NUM == 1
     performance_test_scrypt_1(32, USE_P);
