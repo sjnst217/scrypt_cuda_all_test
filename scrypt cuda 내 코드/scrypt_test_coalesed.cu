@@ -271,7 +271,7 @@ __constant__ uint8_t password[16384] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x7
                                      0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE1, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE2, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE3, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE4, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE5, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE6, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE7, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE8,
                                      0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xE9, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xEA, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xEB, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xEC, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xED, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xEE, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xEF, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF0,
                                      0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF1, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF2, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF3, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF4, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF5, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF6, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF7, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF8,
-                                     0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF9, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFA, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFB, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFC, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFD, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFE, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFF};
+                                     0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xF9, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFA, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFB, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFC, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFD, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFE, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6F, 0x72, 0xFF };
 __constant__ uint8_t salt[8192] = { 0x4E, 0x61, 0x43, 0x6C,
                                       0x4E, 0x61, 0x43, 0x02, 0x4E, 0x61, 0x43, 0x03, 0x4E, 0x61, 0x43, 0x04, 0x4E, 0x61, 0x43, 0x05, 0x4E, 0x61, 0x43, 0x06, 0x4E, 0x61, 0x43, 0x07, 0x4E, 0x61, 0x43, 0x08, 0x4E, 0x61, 0x43, 0x09,
                                       0x4E, 0x61, 0x43, 0x0A, 0x4E, 0x61, 0x43, 0x0B, 0x4E, 0x61, 0x43, 0x0C, 0x4E, 0x61, 0x43, 0x0D, 0x4E, 0x61, 0x43, 0x0E, 0x4E, 0x61, 0x43, 0x0F, 0x4E, 0x61, 0x43, 0x10, 0x4E, 0x61, 0x43, 0x11,
@@ -687,7 +687,7 @@ __host__ __device__ void _SHA256_process_coalesced(uint8_t* pt, uint64_t ptLen, 
     {
         for (int i = info->lastLen; i < (GPU_SHA256_BLOCK - info->lastLen); i++)
         {
-            info->BUF[i] = pt[num_of_scrypt * p * i + pt_index]; 
+            info->BUF[i] = pt[num_of_scrypt * p * i + pt_index];
             us_coalesced_index += num_of_scrypt * p;
         }
         _SHA256_core((uint32_t*)info->BUF, info->digest);               //BUF의 값의 sha256결과를 digest에 저장
@@ -1269,6 +1269,8 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint64_t p
     uint64_t Blen = 32 * r;
     uint64_t tid = threadIdx.x;
 
+    const uint64_t us_padding_index = tid * Blen + tid;
+
     /* Convert from little endian input */
     for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++)
     {
@@ -1284,21 +1286,21 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint64_t p
     for (i = 1; i < N; i++, pV += 32 * r)
         scryptBlockMix(pV, pV - 32 * r, r);
 
-    scryptBlockMix(X + tid * Blen, V + (N - 1) * 32 * r, r);
+    scryptBlockMix(X + us_padding_index, V + (N - 1) * 32 * r, r);
 
     for (i = 0; i < N; i++)
     {
         uint32_t j;
-        j = X[tid * Blen + 16 * (2 * r - 1)] % N;
+        j = X[us_padding_index + 16 * (2 * r - 1)] % N;
         pV = V + 32 * r * j;
         for (k = 0; k < 32 * r; k++)
-            T[k + tid * Blen] = X[k + tid * Blen] ^ *pV++;
-        scryptBlockMix(X + tid * Blen, T + tid * Blen, r);
+            T[k + us_padding_index] = X[k + us_padding_index] ^ *pV++;
+        scryptBlockMix(X + us_padding_index, T + us_padding_index, r);
     }
     /* Convert output to little endian */
     for (i = 0, pB = B; i < 32 * r; i++)
     {
-        uint32_t xtmp = X[i + tid * Blen];
+        uint32_t xtmp = X[i + us_padding_index];
         *pB = xtmp & 0xff;
         pB += num_of_scrypt * p;
         *pB = (xtmp >> 8) & 0xff;
@@ -1322,6 +1324,8 @@ __device__ void scryptROMix_5(unsigned char* B, uint64_t r, uint64_t N, uint64_t
 
     tid = tid * p + z;
 
+    const uint64_t us_padding_index = tid * Blen + tid;
+
     /* Convert from little endian input */
     for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++)
     {
@@ -1337,21 +1341,21 @@ __device__ void scryptROMix_5(unsigned char* B, uint64_t r, uint64_t N, uint64_t
     for (i = 1; i < N; i++, pV += 32 * r)
         scryptBlockMix(pV, pV - 32 * r, r);
 
-    scryptBlockMix(X + tid * Blen, V + (N - 1) * 32 * r, r);
+    scryptBlockMix(X + us_padding_index, V + (N - 1) * 32 * r, r);
 
     for (i = 0; i < N; i++)
     {
         uint32_t j;
-        j = X[tid * Blen + 16 * (2 * r - 1)] % N;
+        j = X[us_padding_index + 16 * (2 * r - 1)] % N;
         pV = V + 32 * r * j;
         for (k = 0; k < 32 * r; k++)
-            T[k + tid * Blen] = X[k + tid * Blen] ^ *pV++;
-        scryptBlockMix(X + tid * Blen, T + tid * Blen, r);
+            T[k + us_padding_index] = X[k + us_padding_index] ^ *pV++;
+        scryptBlockMix(X + us_padding_index, T + us_padding_index, r);
     }
     /* Convert output to little endian */
     for (i = 0, pB = B; i < 32 * r; i++)
     {
-        uint32_t xtmp = X[i + tid * Blen];
+        uint32_t xtmp = X[i + us_padding_index];
         *pB = xtmp & 0xff;
         pB += num_of_scrypt * p;
         *pB = (xtmp >> 8) & 0xff;
@@ -1373,8 +1377,8 @@ __global__ void GPU_scrypt_first_method(uint8_t* B, uint32_t* V, uint64_t N, uin
 
     Blen = 128 * r * p * gridDim.x;
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     scryptROMix(B + tid, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
 }
@@ -1390,8 +1394,8 @@ __global__ void GPU_scrypt_second_method(uint8_t* B, uint64_t N, uint64_t r, uin
     All_Blen = 128 * r * p * gridDim.x;
     Blen = 128 * r * p;
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1416,8 +1420,8 @@ __global__ void GPU_scrypt_third_method(uint8_t* B, uint64_t N, uint64_t r, uint
     All_Blen = 128 * r * p * gridDim.x;      //전체 블록의 길이
     Blen = 128 * r * p;                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
 
@@ -1439,8 +1443,11 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint64_t N, uint64_t r, uin
     All_Blen = 128 * r * p * gridDim.x;      //전체 블록의 길이
     Blen = 128 * r * p;                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    //__shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    //__shared__ uint32_t T[32 * 8 * USE_P];
+
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1469,8 +1476,8 @@ __global__ void GPU_scrypt_fifth_method(uint8_t* B, uint64_t N, uint64_t r, uint
     All_Blen = 128 * r * p * gridDim.x * blockDim.x;                        //전체 블록의 길이
     Blen = 128 * r * p;                                                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P * USE_P]; // 32 * r * p * sPt (scryptROMix Per thread = p)
+    __shared__ uint32_t X[32 * 8 * USE_P * USE_P + 2 * USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P * USE_P + 2 * USE_P - 1]; // 32 * r * p * sPt (scryptROMix Per thread = p)
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -2616,7 +2623,7 @@ void performance_test_scrypt_2(uint32_t blocksize, uint32_t threadsize)
     {
         printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
     }
-    
+
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
@@ -3106,7 +3113,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-#define TEST_SCRYPT_NUM   2
+#define TEST_SCRYPT_NUM   4
 
 #if TEST_SCRYPT_NUM == 1
     performance_test_scrypt_1(32, USE_P);

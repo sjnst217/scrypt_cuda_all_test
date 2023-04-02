@@ -1126,6 +1126,8 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint32_t* 
     uint64_t Blen = 32 * r;
     uint64_t tid = threadIdx.x;
 
+    const uint64_t us_padding_index = tid * Blen + tid;
+
     /* Convert from little endian input */
     for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++)
     {
@@ -1137,21 +1139,22 @@ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint32_t* 
     for (i = 1; i < N; i++, pV += 32 * r)
         scryptBlockMix(pV, pV - 32 * r, r);
 
-    scryptBlockMix(X + tid * Blen, V + (N - 1) * 32 * r, r);
+    scryptBlockMix(X + us_padding_index, V + (N - 1) * 32 * r, r);
 
     for (i = 0; i < N; i++)
     {
         uint32_t j;
-        j = X[tid * Blen + 16 * (2 * r - 1)] % N;
+        j = X[us_padding_index + 16 * (2 * r - 1)] % N;
         pV = V + 32 * r * j;
+
         for (k = 0; k < 32 * r; k++)
-            T[k + tid * Blen] = X[k + tid * Blen] ^ *pV++;
-        scryptBlockMix(X + tid * Blen, T + tid * Blen, r);
+            T[k + us_padding_index] = X[k + us_padding_index] ^ *pV++;
+        scryptBlockMix(X + us_padding_index, T + us_padding_index, r);
     }
     /* Convert output to little endian */
     for (i = 0, pB = B; i < 32 * r; i++)
     {
-        uint32_t xtmp = X[i + tid * Blen];
+        uint32_t xtmp = X[i + us_padding_index];
         *pB++ = xtmp & 0xff;
         *pB++ = (xtmp >> 8) & 0xff;
         *pB++ = (xtmp >> 16) & 0xff;
@@ -1167,8 +1170,8 @@ __global__ void GPU_scrypt_first_method(uint8_t* B, uint64_t N, uint64_t r, uint
 
     Blen = 128 * r * p * gridDim.x;
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + Blen);
@@ -1186,8 +1189,8 @@ __global__ void GPU_scrypt_second_method(uint8_t* B, uint64_t N, uint64_t r, uin
     All_Blen = 128 * r * p * gridDim.x;
     Blen = 128 * r * p;
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1212,8 +1215,8 @@ __global__ void GPU_scrypt_third_method(uint8_t* B, uint64_t N, uint64_t r, uint
     All_Blen = 128 * r * p * gridDim.x;      //전체 블록의 길이
     Blen = 128 * r * p;                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1235,8 +1238,8 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint64_t N, uint64_t r, uin
     All_Blen = 128 * r * p * gridDim.x;      //전체 블록의 길이
     Blen = 128 * r * p;                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1264,8 +1267,11 @@ __global__ void GPU_scrypt_fifth_method(uint8_t* B, uint64_t N, uint64_t r, uint
     All_Blen = 128 * r * p * gridDim.x * blockDim.x;                        //전체 블록의 길이
     Blen = 128 * r * p;                                                     //1개의 블록의 길이
 
-    __shared__ uint32_t X[32 * 8 * USE_P * USE_P]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P * USE_P];
+    __shared__ uint32_t X[32 * 8 * USE_P * USE_P + 2 * USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P * USE_P + 2 * USE_P - 1];
+
+    //uint32_t X[32 * 8];
+    //uint32_t T[32 * 8];
 
     uint32_t* V = NULL;
     V = (uint32_t*)(B + All_Blen);
@@ -1332,7 +1338,6 @@ void performance_test_scrypt_1(uint32_t blocksize, uint32_t threadsize)
     GPU_scrypt_first_method << <blocksize, threadsize >> > (gpu_b, 1024, 8, threadsize);
 
     cudaMemcpy(cpu_block, gpu_b, Blen * blocksize, cudaMemcpyDeviceToHost);
-
 
     for (int i = 0; i < blocksize; i++)
     {
@@ -2573,7 +2578,6 @@ void performance_test_scrypt_4(uint32_t blocksize, uint32_t threadsize)
     cudaEventElapsedTime(&elapsed_time_ms, start, stop);
     printf("%4.2f\n", elapsed_time_ms);
 
-
 #if PRINT == 1
     for (int i = 0; i < 64 * blocksize; i++)
     {
@@ -2657,7 +2661,7 @@ void performance_test_scrypt_5(uint32_t num_of_scrypt, uint32_t threadsize)
 
 int main()
 {
-#define TEST_SCRYPT_NUM   5
+#define TEST_SCRYPT_NUM   4
 
 #if TEST_SCRYPT_NUM == 1
     performance_test_scrypt_1(32, USE_P);
@@ -2666,7 +2670,7 @@ int main()
     performance_test_scrypt_1(256, USE_P);
     performance_test_scrypt_1(512, USE_P);
     performance_test_scrypt_1(1024, USE_P);
-    performance_test_scrypt_1(2048, USE_P);
+    performance_test_scrypt_1(2048, USE_P); 
 #elif TEST_SCRYPT_NUM == 2
     performance_test_scrypt_2(32, USE_P);
     performance_test_scrypt_2(64, USE_P);
