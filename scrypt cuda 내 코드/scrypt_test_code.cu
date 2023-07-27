@@ -1247,8 +1247,8 @@ __global__ void GPU_scrypt_fourth_method(uint8_t* B, uint64_t N, uint64_t r, uin
     if (us_tid == 0)
         PBKDF2_HMAC_SHA256(password + (GPU_PASSWORD_LEN * blockIdx.x), GPU_PASSWORD_LEN, salt + (GPU_SALT_LEN * blockIdx.x), GPU_SALT_LEN, B + (blockIdx.x * Blen), Blen, 1);
 
-    scryptROMix(B + tid * 128 * r, r, N, X, T, V + 1024 * r * 32 * tid);
-
+    scryptROMix(B + tid * 128 * r, r, N, X, T, V + N * r * 32 * tid);
+    
     // 이후의 PBKDF2과정에서 scryptROMix 하나의 block에 대한 전체 값에 대해서 집어넣어주어야 하기 때문에 1번의 Thread가 1번의 PBKDF2과정을 하면 안됨
     if (us_tid == 0)
     {
@@ -2548,10 +2548,12 @@ void performance_test_scrypt_4(uint32_t blocksize, uint32_t threadsize)
         return;
     }
 
+    uint64_t N = 16384;
+
     uint8_t* gpu_key = NULL;
     uint8_t* gpu_b = NULL;
     uint64_t Blen = 128 * threadsize * 8;                                 //128 * p * r
-    uint64_t Vlen = 32 * 8 * 1024 * sizeof(uint32_t) * threadsize;      //내부에서 사용하는 Vector의 길이로 현재의 코드에서는 각 p마다 서로 다른 Vector의 메모리를 사용해야하기 때문에 blocksize * threadsize 를 해주어야 한다.
+    uint64_t Vlen = 32 * 8 * N * sizeof(uint32_t) * threadsize;      //내부에서 사용하는 Vector의 길이로 현재의 코드에서는 각 p마다 서로 다른 Vector의 메모리를 사용해야하기 때문에 blocksize * threadsize 를 해주어야 한다.
     uint64_t total = Blen + Vlen;
     float elapsed_time_ms = 0.0f;
 
@@ -2567,7 +2569,7 @@ void performance_test_scrypt_4(uint32_t blocksize, uint32_t threadsize)
     cudaEventCreate(&stop);
     cudaEventRecord(start, 0);
 
-    GPU_scrypt_fourth_method << <blocksize, threadsize >> > (gpu_b, 1024, 8, threadsize, gpu_key, 64);
+    GPU_scrypt_fourth_method << <blocksize, threadsize >> > (gpu_b, N, 8, threadsize, gpu_key, 64);
 
     cudaMemcpy(cpu_key, gpu_key, 64 * blocksize, cudaMemcpyDeviceToHost);
 

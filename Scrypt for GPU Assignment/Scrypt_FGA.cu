@@ -1,51 +1,43 @@
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <Windows.h>
-__int64 cpucycles() {
-	return __rdtsc();
-}
-#define R(a,b)	(((a) << (b)) | ((a) >> (32-(b))))
+#include "type_SFGA.cuh"
 
-#define GPU_SHA256_DIGEST		32
-#define GPU_SHA256_BLOCK		64
-#define GPU_add3(a, b, c)		(a + b + c)
-#define GPU_rotl32(x, n)		(((x) << (n)) | ((x) >> (32 - (n))))
-#define GPU_rotr32(x, n)		(((x) >> (n)) | ((x) << (32 - (n))))
-#define GPU_SHIFT_RIGHT_32(x,n) ((x) >> (n))
-#define GPU_SHA256_F0(x,y,z)	(((x) & (y)) | ((z) & ((x) ^ (y))))
-#define GPU_SHA256_F1(x,y,z)	((z) ^ ((x) & ((y) ^ (z))))
-#define GPU_SHA256_F0o(x,y,z) (GPU_SHA256_F0 ((x), (y), (z)))
-#define GPU_SHA256_F1o(x,y,z) (GPU_SHA256_F1 ((x), (y), (z)))
-#define GPU_SHA256_S0(x) (GPU_rotl32 ((x), 25u) ^ GPU_rotl32 ((x), 14u) ^ GPU_SHIFT_RIGHT_32 ((x),  3u))
-#define GPU_SHA256_S1(x) (GPU_rotl32 ((x), 15u) ^ GPU_rotl32 ((x), 13u) ^ GPU_SHIFT_RIGHT_32 ((x), 10u))
-#define GPU_SHA256_S2(x) (GPU_rotl32 ((x), 30u) ^ GPU_rotl32 ((x), 19u) ^ GPU_rotl32 ((x), 10u))
-#define GPU_SHA256_S3(x) (GPU_rotl32 ((x), 26u) ^ GPU_rotl32 ((x), 21u) ^ GPU_rotl32 ((x),  7u))
-#define GPU_SHA256_EXPAND(x,y,z,w) (GPU_SHA256_S1 (x) + y + GPU_SHA256_S0 (z) + w)
-#define GPU_SHA256_STEP(F0,F1,a,b,c,d,e,f,g,h,x,K)    \
-{                                                 \
-  h = GPU_add3 (h, K, x);                          \
-  h = GPU_add3 (h, GPU_SHA256_S3 (e), F1 (e,f,g));     \
-  d += h;                                         \
-  h = GPU_add3 (h, GPU_SHA256_S2 (a), F0 (a,b,c));     \
-}
+/*
+* 주어진 파라미터의 고정값(N: 1024, r: 8, p: 1)의 경우 기존의 최적화 코드를 사용하는 이유가 없음
+* 
+* 따라서 1 thread 1 Algorithm 으로 코드를 구성, 사용 가능한 최적화 방안을 적용함
+* 
+* BLOCK_SIZE: 256, THREAD_SIZE: 4 인 경우에 가장 높은 성능을 보임
+*/
+
+#define BLOCK_SIZE		256
+#define THREAD_SIZE		4
+#define PASSWORD_SIZE	8
+#define SALT_SIZE		4
+#define USE_P			1
+
+__constant__ uint8_t us_GPU_pass[BLOCK_SIZE * THREAD_SIZE * PASSWORD_SIZE] = {
+
+};
+
+__constant__ uint8_t us_GPU_salt[BLOCK_SIZE * THREAD_SIZE * SALT_SIZE] = {
+
+};
+
 typedef struct {
 	uint32_t digest[8];
 	uint64_t ptLen;
 	uint8_t BUF[GPU_SHA256_BLOCK];
 	uint32_t lastLen;
 }SHA256_INFO;
+
 typedef struct {
 	uint32_t IPAD[8];
 	uint32_t OPAD[8];
 	uint64_t ptLen;
 }PBKDF2_HMAC_SHA256_INFO;
+
 #define GPU_ENDIAN_CHANGE32(X)		((GPU_rotl32((X),  8) & 0x00ff00ff) | (GPU_rotl32((X), 24) & 0xff00ff00))
 
-void _SHA256_init(SHA256_INFO* info) {
+__host__ __device__ void _SHA256_init(SHA256_INFO* info) {
 	info->digest[0] = 0x6a09e667;
 	info->digest[1] = 0xbb67ae85;
 	info->digest[2] = 0x3c6ef372;
@@ -60,7 +52,7 @@ void _SHA256_init(SHA256_INFO* info) {
 	}
 	info->ptLen = 0, info->lastLen = 0;
 }
-void _SHA256_core(uint32_t* input, uint32_t* digest) {
+__host__ __device__ void _SHA256_core(uint32_t* input, uint32_t* digest) {
 	uint32_t a, b, c, d, e, f, g, h;
 	uint32_t w0_t = GPU_ENDIAN_CHANGE32(input[0]);
 	uint32_t w1_t = GPU_ENDIAN_CHANGE32(input[1]);
@@ -165,7 +157,7 @@ void _SHA256_core(uint32_t* input, uint32_t* digest) {
 	digest[6] += g;
 	digest[7] += h;
 }
-void _SHA256_process(uint8_t* pt, uint64_t ptLen, SHA256_INFO* info) {
+__host__ __device__ void _SHA256_process(uint8_t* pt, uint64_t ptLen, SHA256_INFO* info) {
 	uint64_t pt_index = 0;
 	while ((ptLen + info->lastLen) >= GPU_SHA256_BLOCK) {
 		for (int i = info->lastLen; i < (GPU_SHA256_BLOCK - info->lastLen); i++) {
@@ -181,7 +173,7 @@ void _SHA256_process(uint8_t* pt, uint64_t ptLen, SHA256_INFO* info) {
 		info->BUF[i + info->lastLen] = pt[i + pt_index];
 	info->lastLen += ptLen;
 }
-void _SHA256_final(SHA256_INFO* info, uint8_t* out) {
+__host__ __device__ void _SHA256_final(SHA256_INFO* info, uint8_t* out) {
 	uint64_t r = (info->lastLen) % GPU_SHA256_BLOCK;
 	info->BUF[r++] = 0x80;
 	if (r >= GPU_SHA256_BLOCK - 8) {
@@ -238,13 +230,13 @@ void _SHA256_final(SHA256_INFO* info, uint8_t* out) {
 	out[30] = (info->digest[7] >> 8) & 0xff;
 	out[31] = (info->digest[7]) & 0xff;
 }
-void _SHA256(uint8_t* pt, uint64_t ptLen, uint8_t* digest) {
+__host__ __device__ void _SHA256(uint8_t* pt, uint64_t ptLen, uint8_t* digest) {
 	SHA256_INFO info;
 	_SHA256_init(&info);
 	_SHA256_process(pt, ptLen, &info);
 	_SHA256_final(&info, digest);
 }
-void _SHA256_preCompute_core(uint32_t* input, uint32_t* digest) {
+__host__ __device__ void _SHA256_preCompute_core(uint32_t* input, uint32_t* digest) {
 	for (int i = 0; i < 16; i++)
 		input[i] = GPU_ENDIAN_CHANGE32(input[i]);
 
@@ -353,7 +345,7 @@ void _SHA256_preCompute_core(uint32_t* input, uint32_t* digest) {
 	digest[6] = g + 0x1f83d9ab;
 	digest[7] = h + 0x5be0cd19;
 }
-void _SHA256_salt_compute_final(SHA256_INFO* info, uint32_t* out) {
+__host__ __device__ void _SHA256_salt_compute_final(SHA256_INFO* info, uint32_t* out) {
 	uint64_t r = (info->lastLen) % GPU_SHA256_BLOCK;
 	info->BUF[r++] = 0x80;
 	if (r >= GPU_SHA256_BLOCK - 8) {
@@ -380,7 +372,7 @@ void _SHA256_salt_compute_final(SHA256_INFO* info, uint32_t* out) {
 	out[6] = info->digest[6];
 	out[7] = info->digest[7];
 }
-void _PBKDF2_HMAC_SHA256_precompute(uint8_t* pt, uint8_t ptLen, PBKDF2_HMAC_SHA256_INFO* info) {
+__host__ __device__ void _PBKDF2_HMAC_SHA256_precompute(uint8_t* pt, uint8_t ptLen, PBKDF2_HMAC_SHA256_INFO* info) {
 	uint8_t K1[GPU_SHA256_BLOCK];
 	uint8_t K2[GPU_SHA256_BLOCK];
 
@@ -395,7 +387,7 @@ void _PBKDF2_HMAC_SHA256_precompute(uint8_t* pt, uint8_t ptLen, PBKDF2_HMAC_SHA2
 	_SHA256_preCompute_core((uint32_t*)K1, info->IPAD);
 	_SHA256_preCompute_core((uint32_t*)K2, info->OPAD);
 }
-void _PBKDF2_HMAC_SHA256_salt_compute(uint8_t* salt, uint64_t saLen, uint32_t integer, PBKDF2_HMAC_SHA256_INFO* INFO, uint32_t* out) {
+__host__ __device__ void _PBKDF2_HMAC_SHA256_salt_compute(uint8_t* salt, uint64_t saLen, uint32_t integer, PBKDF2_HMAC_SHA256_INFO* INFO, uint32_t* out) {
 	SHA256_INFO info;
 	uint8_t temp[4] = { (integer >> 24) & 0xff, (integer >> 16) & 0xff, (integer >> 8) & 0xff, (integer & 0xff) };
 	info.digest[0] = INFO->IPAD[0];
@@ -412,7 +404,7 @@ void _PBKDF2_HMAC_SHA256_salt_compute(uint8_t* salt, uint64_t saLen, uint32_t in
 	_SHA256_process(temp, 4, &info);
 	_SHA256_salt_compute_final(&info, out);
 }
-void _PBKDF2_HMAC_SHA256_core(uint32_t* _prestate, uint32_t* digest, uint32_t* in) {
+__host__ __device__ void _PBKDF2_HMAC_SHA256_core(uint32_t* _prestate, uint32_t* digest, uint32_t* in) {
 
 	uint32_t w0_t = in[0];
 	uint32_t w1_t = in[1];
@@ -517,11 +509,10 @@ void _PBKDF2_HMAC_SHA256_core(uint32_t* _prestate, uint32_t* digest, uint32_t* i
 	digest[6] = _prestate[6] + g;
 	digest[7] = _prestate[7] + h;
 }
-void PBKDF2_HMAC_SHA256(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, uint32_t* dk, uint32_t dkLen, size_t iter) {
+__host__ __device__ void PBKDF2_HMAC_SHA256(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, uint8_t* dkout, size_t dkLen, size_t iter) {
 	uint8_t buf[GPU_SHA256_BLOCK];
 	uint32_t _first[8];
 	uint32_t _second[8];
-	uint32_t temp[8];
 	PBKDF2_HMAC_SHA256_INFO info;
 	uint32_t _TkLen = dkLen / GPU_SHA256_DIGEST;
 	if (dkLen % GPU_SHA256_DIGEST != 0) { _TkLen++; }
@@ -539,29 +530,22 @@ void PBKDF2_HMAC_SHA256(uint8_t* pt, size_t ptLen, uint8_t* salt, size_t saLen, 
 	for (uint32_t i = 0; i < _TkLen; i++) {
 		_PBKDF2_HMAC_SHA256_salt_compute(salt, saLen, i + 1, &info, _first);
 		_PBKDF2_HMAC_SHA256_core(info.OPAD, _second, _first);
-		for (int j = 0; j < 8; j++)
-			temp[j] = _second[j];
-
-
-		for (int k = 1; k < iter; k++) {
-			_PBKDF2_HMAC_SHA256_core(info.IPAD, _first, _second);
-			_PBKDF2_HMAC_SHA256_core(info.OPAD, _second, _first);
-			for (int x = 0; x < 8; x++)
-				temp[x] ^= _second[x];
-		}
 		for (int z = 0; z < 8; z++) {
-			dk[8 * i + z] = temp[z];
+			dkout[4 * z + 0] = (_second[z] >> 24) & 0xff;
+			dkout[4 * z + 1] = (_second[z] >> 16) & 0xff;
+			dkout[4 * z + 2] = (_second[z] >> 8) & 0xff;
+			dkout[4 * z + 3] = (_second[z] >> 0) & 0xff;
 		}
+		dkout += 32;
 	}
 }
 
 
-#define R(a,b) (((a) << (b)) | ((a) >> (32 - (b))))
-static void salsa208_word_specification(uint32_t inout[16])
+__host__ __device__ void salsa208_word_specification(uint32_t inout[16])
 {
 	int i;
 	uint32_t x[16];
-	memcpy(x, inout, sizeof(x));
+	memcpy(x, inout, sizeof(uint32_t) * 16);
 	for (i = 8; i > 0; i -= 2) {
 		x[4] ^= R(x[0] + x[12], 7);
 		x[8] ^= R(x[4] + x[0], 9);
@@ -598,14 +582,13 @@ static void salsa208_word_specification(uint32_t inout[16])
 	}
 	for (i = 0; i < 16; ++i)
 		inout[i] += x[i];
-	memset(x, 0, sizeof(uint32_t) * 16);
 }
-static void scryptBlockMix(uint32_t* B_, uint32_t* B, uint64_t r)
+__host__ __device__ void scryptBlockMix(uint32_t* B_, uint32_t* B, uint64_t r) // B_의 값에 B의 값을 BlockMix해준 값을 저장해줌
 {
 	uint64_t i, j;
 	uint32_t X[16], * pB;
 
-	memcpy(X, B + (r * 2 - 1) * 16, sizeof(X));
+	memcpy(X, B + (r * 2 - 1) * 16, sizeof(uint32_t) * 16);
 	pB = B;
 	for (i = 0; i < r * 2; i++) {
 		for (j = 0; j < 16; j++)
@@ -613,40 +596,37 @@ static void scryptBlockMix(uint32_t* B_, uint32_t* B, uint64_t r)
 		salsa208_word_specification(X);
 		memcpy(B_ + (i / 2 + (i & 1) * r) * 16, X, sizeof(X));
 	}
-	memset(X, 0, sizeof(uint32_t) * 16);
 }
-static void scryptROMix(unsigned char* B, uint64_t r, uint64_t N,
-	uint32_t* X, uint32_t* T, uint32_t* V)
+__host__ __device__ void scryptROMix(unsigned char* B, uint64_t r, uint64_t N, uint32_t* X, uint32_t* T, uint32_t* V, uint32_t z)
 {
 	unsigned char* pB;
 	uint32_t* pV;
 	uint64_t i, k;
-	uint64_t cycle0 = 0;
-	uint64_t cycle1 = 0;
+
 	/* Convert from little endian input */
-	for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++) {
-		*pV = *pB++;
-		*pV |= *pB++ << 8;
+	for (pV = V, i = 0, pB = B; i < 32 * r; i++, pV++) {	//unsigned int 형의 pV에다가 unsigned char 형의 pB를 집어넣어주기
+		*pV = *pB++;										//-> 이러면 128 * r 이 아니라 32 * r 로 바꿀 수 있다 -> 반복 횟수를 줄일 수 있음
+		*pV |= *pB++ << 8;									// 결국 맨 처음 V를 만들어 주는 코드
 		*pV |= *pB++ << 16;
 		*pV |= (uint32_t)*pB++ << 24;
 	}
-	for (i = 1; i < N; i++, pV += 32 * r)
+	for (i = 1; i < N; i++, pV += 32 * r)					//V의 N - 1 까지 생성해주는 코드
 		scryptBlockMix(pV, pV - 32 * r, r);
-	scryptBlockMix(X, V + (N - 1) * 32 * r, r);
+	scryptBlockMix(X + 32 * 8 * z, V + (N - 1) * 32 * r, r);
 
 	for (i = 0; i < N; i++) {
-		uint32_t j;
-		j = X[16 * (2 * r - 1)] % N;
-		pV = V + 32 * r * j;
+		uint32_t j;						//mod연산을 통해서 몇번째 V값을 사용할 지 결정해주기 위한 변수
+		j = X[16 * (2 * r - 1) + 32 * 8 * z] % N;	//mod연산을 해주고
+		pV = V + 32 * r * j;			//pV의 값에 V의 j번째 값 넣어주고
 		for (k = 0; k < 32 * r; k++)
-			T[k] = X[k] ^ *pV++;
-		scryptBlockMix(X, T, r);
+			T[k + 32 * 8 * z] = X[k + 32 * 8 * z] ^ *pV++;		//T의 값에 X와 pV의 값 XOR연산
+		scryptBlockMix(X + 32 * 8 * z, T + 32 * 8 * z, r);		//X의 값에 T의 값을 blockMix해서 저장
 	}
 
 
 	/* Convert output to little endian */
-	for (i = 0, pB = B; i < 32 * r; i++) {
-		uint32_t xtmp = X[i];
+	for (i = 0, pB = B; i < 32 * r; i++) { //pB의 마지막 값에 결과값을 집어넣어주기 위해서 endian 변환을 통해서 해줌
+		uint32_t xtmp = X[i + 32 * 8 * z];
 		*pB++ = xtmp & 0xff;
 		*pB++ = (xtmp >> 8) & 0xff;
 		*pB++ = (xtmp >> 16) & 0xff;
@@ -654,64 +634,147 @@ static void scryptROMix(unsigned char* B, uint64_t r, uint64_t N,
 	}
 }
 
-int EVP_PBE_scrypt(uint8_t* pass, size_t passlen, uint8_t* salt, size_t saltlen, uint64_t N, uint64_t r, uint64_t p, uint8_t* key, size_t keylen) {
-	uint64_t i, Blen, Vlen;
-	uint32_t* X = NULL;
-	uint32_t* T = NULL;
-	uint32_t* V = NULL;
-	uint8_t* B = NULL;
-	uint64_t cycle0 = 0;
-	uint64_t cycle1 = 0;
-	uint64_t result = 0;
-	Blen = p * 128 * r;
-	Vlen = 32 * r * (N + 2) * sizeof(uint32_t);
-	B = (uint8_t*)malloc(Blen + Vlen);
-	X = (uint32_t*)(B + Blen);
-	T = X + 32 * r;
-	V = T + 32 * r;
+// 해당 함수 사용 시 shared memory의 선언이 따로 필요함
+__host__ __device__ void GPU_scrypt_DEVICE(uint8_t* B, uint32_t passlen, uint32_t saltlen, uint32_t N, uint32_t r, uint32_t p, uint8_t* key, uint32_t keylen)
+{
+	uint64_t data_index = 0;											//현재 스레드의 block(data)에 대한 index
+	uint64_t i, Blen, j, All_Blen;
 
-	cycle0 = cpucycles();
-	PBKDF2_HMAC_SHA256(pass, passlen, salt, saltlen, (uint32_t*)B, Blen, 1);
-	cycle1 = cpucycles();
-	result += cycle1 - cycle0;
+	Blen = 128 * USE_P * r;												//하나의 B block의 길이
+	All_Blen = Blen * gridDim.x * blockDim.x;							//전체 B block의 길이
 
-	for (i = 0; i < p; i++) {
-		uint64_t cycle2 = 0;
-		uint64_t cycle3 = 0;
-		cycle2 = cpucycles();
-		scryptROMix(B + 128 * r * i, r, N, X, T, V);
-		cycle3 = cpucycles();
-		result += (cycle3 - cycle2);
+	data_index = (blockDim.x * blockIdx.x) + threadIdx.x;				//현재의 스레드 번호에 대해서
+
+	////thread index * 2 KB_(128 * r * p * threadsize * 2 byte)
+	//__shared__ uint32_t X[32 * 8 * USE_P * THREAD_SIZE];				//현재 스레드에서 사용될 X(ROMix함수의 초기 block)의 값을 복사하기 위한 변수
+	//__shared__ uint32_t T[32 * 8 * USE_P * THREAD_SIZE];				//현재 스레드에서 사용될 T(ROMix함수의 중간 결과 block (X XOR V_j 같은 애들))의 값을 복사하기 위한 변수
+
+	// 임의의 X, T - shared memory 선언 시 삭제 필요
+	uint32_t X[32 * 8 * USE_P * THREAD_SIZE];				
+	uint32_t T[32 * 8 * USE_P * THREAD_SIZE];
+
+	uint32_t* V = NULL;													//현재 스레드에서 사용될 V(Vector)의 값을 복사하기 위한 변수
+	V = (uint32_t*)(B + All_Blen);
+
+	PBKDF2_HMAC_SHA256(us_GPU_pass + (passlen * (blockDim.x * blockIdx.x + threadIdx.x)), passlen, us_GPU_salt + (saltlen * (blockDim.x * blockIdx.x + threadIdx.x)), saltlen, B + data_index * Blen, Blen, 1);
+
+	for (i = 0; i < USE_P; i++)
+	{
+		scryptROMix(B + data_index * Blen + 128 * r * i, r, N, X + threadIdx.x * 32 * r * USE_P, T + threadIdx.x * 32 * r * USE_P, V + data_index * N * r * 32 * USE_P + N * r * 32 * i, i);
 	}
 
-	cycle0 = cpucycles();
-	PBKDF2_HMAC_SHA256(pass, passlen, B, Blen, key, keylen, 1);
-	cycle1 = cpucycles();
-	result += cycle1 - cycle0;
-
-	printf("clock size = %llu\n", result);
-	printf("[CPU] Performance of Scrypt/sec = %llu\n", (3700000000) / (result));	//사용 하고계신 CPU 성능에 맞게 앞의 숫자 바꿔서 측정하셔야 정확해용
+	PBKDF2_HMAC_SHA256(us_GPU_pass + (passlen * (blockDim.x * blockIdx.x + threadIdx.x)), passlen, B + data_index * Blen, Blen, key + keylen * data_index, keylen, 1);
 }
 
-int main()
+//				순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
+__global__ void GPU_scrypt(uint8_t* B, uint32_t passlen, uint32_t saltlen, uint32_t N, uint32_t r, uint32_t p, uint8_t* key, uint32_t keylen)
 {
-	uint32_t dkout[16] = { 0, };
-	uint8_t password[8] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
-	uint8_t salt[4] = { 0x4e, 0x61, 0x43, 0x6c };
-	uint32_t r = 8;
-	uint32_t p = 2;															//p가 2일때, p가 4일때의 값
-	uint32_t N = 1024;
-	uint32_t dklen = 64;
-	EVP_PBE_scrypt(password, 8, salt, 4, N, r, p, (uint8_t*)dkout, dklen);
+	uint64_t data_index = 0;											//현재 스레드의 block(data)에 대한 index
+	uint64_t i, Blen, j, All_Blen;
+	
+	Blen = 128 * USE_P * r;												//하나의 B block의 길이
+	All_Blen = Blen * gridDim.x * blockDim.x;							//전체 B block의 길이
 
-	for (int i = 0; i < 64; i++)
+	data_index = (blockDim.x * blockIdx.x) + threadIdx.x;				//현재의 스레드 번호에 대해서
+
+	//thread index * 2 KB_(128 * r * p * threadsize * 2 byte)
+	__shared__ uint32_t X[32 * 8 * USE_P * THREAD_SIZE];				//현재 스레드에서 사용될 X(ROMix함수의 초기 block)의 값을 복사하기 위한 변수
+	__shared__ uint32_t T[32 * 8 * USE_P * THREAD_SIZE];				//현재 스레드에서 사용될 T(ROMix함수의 중간 결과 block (X XOR V_j 같은 애들))의 값을 복사하기 위한 변수
+	
+	uint32_t* V = NULL;													//현재 스레드에서 사용될 V(Vector)의 값을 복사하기 위한 변수
+	V = (uint32_t*)(B + All_Blen);
+
+	PBKDF2_HMAC_SHA256(us_GPU_pass + (passlen * (blockDim.x * blockIdx.x + threadIdx.x)), passlen, us_GPU_salt + (saltlen * (blockDim.x * blockIdx.x + threadIdx.x)), saltlen, B + data_index * Blen, Blen, 1);
+	
+	for (i = 0; i < USE_P; i++)
 	{
-		printf("%02X ", dkout[i]);
-		if ((i + 1) % 16 == 0)
-			printf("\n");
-		if ((i + 1) % 64 == 0)
-			printf("\n");
+		scryptROMix(B + data_index * Blen + 128 * r * i, r, N, X + threadIdx.x * 32 * r * USE_P, T + threadIdx.x * 32 * r * USE_P, V + data_index * N * r * 32 * USE_P + N * r * 32 * i, i);
 	}
+
+	PBKDF2_HMAC_SHA256(us_GPU_pass + (passlen * (blockDim.x * blockIdx.x + threadIdx.x)), passlen, B + data_index * Blen, Blen, key + keylen * data_index, keylen, 1);
+}
+
+void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
+	cudaError_t err;
+	cudaEvent_t start, stop;
+	uint8_t password[PASSWORD_SIZE] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
+	uint8_t salt[SALT_SIZE] = { 0x4e, 0x61, 0x43, 0x6c };
+
+	uint8_t all_password[PASSWORD_SIZE * BLOCK_SIZE * THREAD_SIZE] = { 0, };
+	uint8_t all_salt[SALT_SIZE * BLOCK_SIZE * THREAD_SIZE] = { 0, };
+
+	uint32_t N = 16384;
+	uint32_t r = 8;
+
+	for (int i = 0; i < BLOCK_SIZE * THREAD_SIZE; i++)
+	{
+		memcpy(all_password + i * PASSWORD_SIZE, password, sizeof(uint8_t) * 8);
+		memcpy(all_salt + i * SALT_SIZE, salt, sizeof(uint8_t) * 4);
+		password[7] = (i + 1) & 0xff;											//한 번 반복 때마다 password를 변환시켜주기 위함 -> 변환하고자 하는 코드에서는 안해줘도 됨
+		salt[3] = (i + 2) & 0xff;												//한 번 반복 때마다 salt를 변환시켜주기 위함 -> 위와 동일
+	}
+
+	uint8_t* cpu_key = (uint8_t*)malloc(blocksize * threadsize * 64); //scrypt 에서 만들어낼 key저장용 
+	if (cpu_key == NULL)
+		return;
+
+	//uint8_t* gpu_pass = NULL;										//gpu 내부에서의 password
+	//uint8_t* gpu_salt = NULL;										//gpu 내부에서의 salt
+	uint8_t* gpu_key = NULL;										//gpu 내부에서의 key
+	uint8_t* gpu_b = NULL;											//gpu 내부에서의 전체 block
+	uint64_t Blen = 128 * r * USE_P;								//block 길이 (128 * p * r)
+	uint64_t Vlen = 32 * r * N * sizeof(uint32_t) * USE_P;		//내부에서 사용하는 Vector의 길이 (128 * r * N) 여기에서 32인 이유는 Vector를 연산할 때 uint8_t 였던 block을 uint32_t로 바꾸어서 연산하기 때문, (N + 2)를 해 준 이유는 X block 과 마지막 결과값(output) 의 크기를 할당하기 위해서 인듯?
+	uint64_t total = Blen + Vlen;									//내부에 할당할 전체 크기
+	float elapsed_time_ms = 0.0f;
+
+
+	//cudaMalloc((void**)&gpu_pass, PASSWORD_SIZE * blocksize * threadsize);			//gpu 전체 password 할당
+	//cudaMalloc((void**)&gpu_salt, SALT_SIZE * blocksize * threadsize);				//gpu 전체 salt 할당
+	cudaMalloc((void**)&gpu_key, 64 * blocksize * threadsize);			//gpu 전체 key 할당
+	err = cudaMalloc((void**)&gpu_b, total * blocksize * threadsize);	//gpu 전체 block 할당 -> 전체 block 크기를 할당해야 하기 때문에 사용되는 모든 block의 크기를 생각해서 할당해 주어야 함 
+	if (err != cudaSuccess) {
+		printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
+	}
+
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
+
+	cudaMemcpyToSymbol(us_GPU_pass, all_password, sizeof(uint8_t) * PASSWORD_SIZE * BLOCK_SIZE * THREAD_SIZE);	//gpu_pass에서 각각의 스레드에서 사용할 현재의 password를 나누어줌 -> 변환하고자 하는 코드에서는 1번만 해주면 됨
+	cudaMemcpyToSymbol(us_GPU_salt, all_salt, sizeof(uint8_t) * SALT_SIZE * BLOCK_SIZE * THREAD_SIZE);			//gpu_salt에서 각각의 스레드에서 사용할 현재의 salt를 나누어줌 -> 위와 동일
+
+	GPU_scrypt << <blocksize, threadsize >> > (gpu_b, PASSWORD_SIZE, SALT_SIZE, N, r, USE_P, gpu_key, 64);	// 순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
+	
+	cudaMemcpy(cpu_key, gpu_key, 64 * blocksize * threadsize, cudaMemcpyDeviceToHost);						// 연산을 마친 gpu의 전체 key를 cpu로 복사
+
+	cudaEventRecord(stop, 0);
+	cudaDeviceSynchronize();
+	cudaEventSynchronize(start);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsed_time_ms, start, stop);
+	printf("%4.2f\n", elapsed_time_ms);
+	printf("blocksize: %d, threadsize: %d, scrypt/s: %4.2f\n\n", blocksize, threadsize, blocksize * threadsize * (1000 / elapsed_time_ms));
+
+	//getchar();
+
+	//for (int i = 0; i < 64 * blocksize * threadsize; i++)
+	//{
+	//	printf("%02X ", cpu_key[i]);
+	//	if ((i + 1) % 16 == 0)
+	//		printf("\n");
+	//	if ((i + 1) % 64 == 0)
+	//		printf("\n");
+	//}
+
+	//cudaFree(gpu_pass);
+	//cudaFree(gpu_salt);
+	cudaFree(gpu_b);
+	cudaFree(gpu_key);
+	free(cpu_key);
+}
+
+int main() {
+	performance_test_scrypt(BLOCK_SIZE, THREAD_SIZE);
 
 	return 0;
 }

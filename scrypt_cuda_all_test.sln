@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scrypt cuda 진이형 코�
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scrypt cpu test", "scrypt cuda_test\scrypt cuda_test.vcxproj", "{56EA1966-1B59-4D35-A381-D0F9B93551F5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Scrypt for GPU Assignment", "Scrypt for GPU Assignment\Scrypt for GPU Assignment.vcxproj", "{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -37,6 +39,12 @@ Global
 		{56EA1966-1B59-4D35-A381-D0F9B93551F5}.Release|x64.Build.0 = Release|x64
 		{56EA1966-1B59-4D35-A381-D0F9B93551F5}.Release|x86.ActiveCfg = Release|Win32
 		{56EA1966-1B59-4D35-A381-D0F9B93551F5}.Release|x86.Build.0 = Release|Win32
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Debug|x64.ActiveCfg = Debug|x64
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Debug|x64.Build.0 = Debug|x64
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Debug|x86.ActiveCfg = Debug|x64
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Release|x64.ActiveCfg = Release|x64
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Release|x64.Build.0 = Release|x64
+		{0BF1FAD6-E3FA-4D49-AC7B-E66E5D94BEC4}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

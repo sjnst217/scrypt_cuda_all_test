@@ -532,7 +532,6 @@ __constant__ uint8_t salt[8192] = { 0x4E, 0x61, 0x43, 0x6C,
 
 #define GPU_ENDIAN_CHANGE32(X)      ((GPU_rotl32((X),  8) & 0x00ff00ff) | (GPU_rotl32((X), 24) & 0xff00ff00))
 
-
 __host__ __device__ void _SHA256_init(SHA256_INFO* info)
 {
     info->digest[0] = 0x6a09e667;
@@ -1377,8 +1376,10 @@ __global__ void GPU_scrypt_first_method(uint8_t* B, uint32_t* V, uint64_t N, uin
 
     Blen = 128 * r * p * gridDim.x;
 
-    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1]; // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
-    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];
+    __shared__ uint32_t X[32 * 8 * USE_P + USE_P - 1];  // 여기에서 8은 r임 -> 즉 B에서의 한 block의 크기만큼을 가짐
+    __shared__ uint32_t T[32 * 8 * USE_P + USE_P - 1];  // 패딩해야하는 값만큼 shared memory의 양을 늘려줌 -> 이 경우 USE_P는 p의 크기로 thread의 크기와 동일 -> thread가 128이라고하면
+
+
 
     scryptROMix(B + tid, r, N, p, num_of_scrypt, X, T, V + 1024 * r * 32 * tid);
 }
@@ -3140,12 +3141,12 @@ int main()
     performance_test_scrypt_3(1024, USE_P);
     performance_test_scrypt_3(2048, USE_P);
 #elif TEST_SCRYPT_NUM == 4
-    performance_test_scrypt_4(32, USE_P);
-    performance_test_scrypt_4(64, USE_P);
-    performance_test_scrypt_4(128, USE_P);
-    performance_test_scrypt_4(256, USE_P);
-    performance_test_scrypt_4(512, USE_P);
-    performance_test_scrypt_4(1024, USE_P);
+    //performance_test_scrypt_4(32, USE_P);
+    //performance_test_scrypt_4(64, USE_P);
+    //performance_test_scrypt_4(128, USE_P);
+    //performance_test_scrypt_4(256, USE_P);
+    //performance_test_scrypt_4(512, USE_P);
+    //performance_test_scrypt_4(1024, USE_P);
     performance_test_scrypt_4(2048, USE_P);
 #elif TEST_SCRYPT_NUM == 5
     performance_test_scrypt_5(32, USE_P);   // 기존과 같은 방식나타내는게 보기 쉬울것 같아서 이렇게 나타냄      
