@@ -649,7 +649,8 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	cudaEvent_t start, stop;
 	uint8_t password[8] = { 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64 };
 	uint8_t salt[4] = { 0x4e, 0x61, 0x43, 0x6c };
-	uint8_t* cpu_key = (uint8_t*)malloc(blocksize * threadsize * 64); //scrypt 에서 만들어낼 key저장용 
+
+	uint8_t* cpu_key = (uint8_t*)malloc(blocksize * threadsize * 32); //scrypt 에서 만들어낼 key저장용 
 	if (cpu_key == NULL)
 		return;
 
@@ -657,15 +658,15 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	uint8_t* gpu_salt = NULL;										//gpu 내부에서의 salt
 	uint8_t* gpu_key = NULL;										//gpu 내부에서의 key
 	uint8_t* gpu_b = NULL;											//gpu 내부에서의 전체 block
-	uint64_t Blen = 128 * USE_P * 8;									//block 길이 (128 * p * r)
-	uint64_t Vlen = 32 * 8 * (16384 + 2) * sizeof(uint32_t);			//내부에서 사용하는 Vector의 길이 (128 * r * N) 여기에서 32인 이유는 Vector를 연산할 때 uint8_t 였던 block을 uint32_t로 바꾸어서 연산하기 때문, (N + 2)를 해 준 이유는 X block 과 마지막 결과값(output) 의 크기를 할당하기 위해서 인듯?
+	uint64_t Blen = 128 * USE_P * 1;									//block 길이 (128 * p * r)
+	uint64_t Vlen = 32 * 1 * (1024 + 2) * sizeof(uint32_t);			//내부에서 사용하는 Vector의 길이 (128 * r * N) 여기에서 32인 이유는 Vector를 연산할 때 uint8_t 였던 block을 uint32_t로 바꾸어서 연산하기 때문, (N + 2)를 해 준 이유는 X block 과 마지막 결과값(output) 의 크기를 할당하기 위해서 인듯?
 	uint64_t total = Blen + Vlen;									//내부에 할당할 전체 크기
 	float elapsed_time_ms = 0.0f;
 
 
-	cudaMalloc((void**)&gpu_pass, 8 * blocksize * threadsize);			//gpu 전체 password 할당
-	cudaMalloc((void**)&gpu_salt, 4 * blocksize * threadsize);			//gpu 전체 salt 할당
-	cudaMalloc((void**)&gpu_key, 64 * blocksize * threadsize);			//gpu 전체 key 할당
+	cudaMalloc((void**)&gpu_pass, 128 * blocksize * threadsize);			//gpu 전체 password 할당
+	cudaMalloc((void**)&gpu_salt, 128 * blocksize * threadsize);			//gpu 전체 salt 할당
+	cudaMalloc((void**)&gpu_key, 32 * blocksize * threadsize);			//gpu 전체 key 할당
 	err = cudaMalloc((void**)&gpu_b, total * blocksize * threadsize);	//gpu 전체 block 할당 -> 전체 block 크기를 할당해야 하기 때문에 사용되는 모든 block의 크기를 생각해서 할당해 주어야 함 
 	if (err != cudaSuccess) {
 		printf("gpu_b : CUDA error : %s\n", cudaGetErrorString(err));
@@ -676,16 +677,16 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	cudaEventRecord(start, 0);
 
 	for (int i = 0; i < blocksize * threadsize; i++) {
-		cudaMemcpy(gpu_pass + (8 * i), password, 8, cudaMemcpyHostToDevice);	//gpu_pass에서 각각의 스레드에서 사용할 현재의 password를 나누어줌 -> 변환하고자 하는 코드에서는 1번만 해주면 됨
-		cudaMemcpy(gpu_salt + (4 * i), salt, 4, cudaMemcpyHostToDevice);		//gpu_salt에서 각각의 스레드에서 사용할 현재의 salt를 나누어줌 -> 위와 동일
+		cudaMemcpy(gpu_pass + (128 * i), password, 128, cudaMemcpyHostToDevice);	//gpu_pass에서 각각의 스레드에서 사용할 현재의 password를 나누어줌 -> 변환하고자 하는 코드에서는 1번만 해주면 됨
+		cudaMemcpy(gpu_salt + (128 * i), salt, 128, cudaMemcpyHostToDevice);		//gpu_salt에서 각각의 스레드에서 사용할 현재의 salt를 나누어줌 -> 위와 동일
 		password[7] = (i + 1) & 0xff;											//한 번 반복 때마다 password를 변환시켜주기 위함 -> 변환하고자 하는 코드에서는 안해줘도 됨
 		salt[3] = (i + 2) & 0xff;												//한 번 반복 때마다 salt를 변환시켜주기 위함 -> 위와 동일
 	}
 
 	for (int i = 0; i < 1; i++) {
-		GPU_scrypt << <blocksize, threadsize >> > (gpu_b, gpu_pass, 8,\
-			gpu_salt, 4, 16384, 8, USE_P, gpu_key, 64);	// 순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
-		cudaMemcpy(cpu_key, gpu_key, 64 * blocksize * threadsize, cudaMemcpyDeviceToHost);						// 연산을 마친 gpu의 전체 key를 cpu로 복사
+		GPU_scrypt << <blocksize, threadsize >> > (gpu_b, gpu_pass, 128,\
+			gpu_salt, 128, 1024, 1, USE_P, gpu_key, 32);	// 순서대로 전체 할당 block, 전체 할당 password, password의 길이, 전체 할당 salt, salt의 길이, N, r, p, 전체 할당 key, key의 길이
+		cudaMemcpy(cpu_key, gpu_key, 32 * blocksize * threadsize, cudaMemcpyDeviceToHost);						// 연산을 마친 gpu의 전체 key를 cpu로 복사
 	}
 
 	cudaEventRecord(stop, 0);
@@ -696,14 +697,14 @@ void performance_test_scrypt(uint32_t blocksize, uint32_t threadsize) {
 	printf("%4.2f\n", elapsed_time_ms);
 	printf("blocksize: %d, threadsize: %d, scrypt/s: %4.2f\n\n", blocksize, threadsize, blocksize * threadsize * (1000 / elapsed_time_ms));
 
-	//for (int i = 0; i < 64 * blocksize * threadsize; i++)
-	//{
-	//	printf("%02X ", cpu_key[i]);
-	//	if ((i + 1) % 16 == 0)
-	//		printf("\n");
-	//	if ((i + 1) % 64 == 0)
-	//		printf("\n");
-	//}
+	for (int i = 0; i < 32 * blocksize * threadsize; i++)
+	{
+		printf("%02X ", cpu_key[i]);
+		if ((i + 1) % 8 == 0)
+			printf("\n");
+		if ((i + 1) % 32 == 0)
+			printf("\n");
+	}
 
 	cudaFree(gpu_pass);
 	cudaFree(gpu_salt);
@@ -716,12 +717,7 @@ int main() {
 
 
 	//performance_test_scrypt(64, 16);
-	performance_test_scrypt(1024, 1);
-	performance_test_scrypt(512, 2);
-	performance_test_scrypt(256, 4);
-	performance_test_scrypt(128, 8);
-	performance_test_scrypt(64, 16);
-
+	performance_test_scrypt(1, 1);
 
 
 }
